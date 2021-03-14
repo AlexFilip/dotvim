@@ -327,11 +327,11 @@ augroup EnterAndLeave
     autocmd CmdlineEnter *                    redrawtabline
     autocmd CmdlineLeave *                    redrawtabline
 
-    autocmd CmdlineEnter / call OverrideModeName("Search") | redrawtabline
-    autocmd CmdlineLeave / call OverrideModeName(0) | redrawtabline
+    " autocmd CmdlineEnter / call OverrideModeName("Search") | redrawtabline
+    " autocmd CmdlineLeave / call OverrideModeName(0) | redrawtabline
 
-    autocmd CmdlineEnter ? call OverrideModeName("Reverse Search") | redrawtabline
-    autocmd CmdlineLeave ? call OverrideModeName(0) | redrawtabline
+    " autocmd CmdlineEnter ? call OverrideModeName("Reverse Search") | redrawtabline
+    " autocmd CmdlineLeave ? call OverrideModeName(0) | redrawtabline
 
     " I created these but they don't work as intended yet
     " autocmd  VisualEnter *                    redrawtabline
@@ -360,10 +360,10 @@ let g:netrw_banner = 0
 " Docs: http://vimhelp.appspot.com/eval.txt.html
 set fillchars=stlnc:\|,vert:\|,fold:.,diff:.
 
-let s:mode_name_override = 0
-function! OverrideModeName(name)
-    let s:mode_name_override = a:name
-endfunction
+" let s:mode_name_override = 0
+" function! OverrideModeName(name)
+"     let s:mode_name_override = a:name
+" endfunction
 
 let s:current_mode = {
     \ 'n'  : 'Normal',
@@ -377,11 +377,13 @@ let s:current_mode = {
 \ }
 
 function! GetCurrentMode()
-    if s:mode_name_override isnot 0
-        return s:mode_name_override
-    else
-        return get(s:current_mode, mode(), mode())
-    endif
+    " if s:mode_name_override isnot 0
+    "     return s:mode_name_override
+    " else
+
+    return get(s:current_mode, mode(), mode())
+
+    " endif
 endfunction
 
 
