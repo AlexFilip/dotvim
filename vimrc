@@ -140,41 +140,6 @@ endfunction
 nnoremap <silent> g{ :<C-U>call MoveTab(-1, v:count)<CR>
 nnoremap <silent> g} :<C-U>call MoveTab(+1, v:count)<CR>
 
-" GUI only
-" nnoremap <silent> <S-[> :<C-U>call MoveTab(-1, v:count)<CR>
-" nnoremap <silent> <S-]> :<C-U>call MoveTab(+1, v:count)<CR>
-
-" Navigate editor with alt
-" nnoremap <silent> <A-{> :<C-U>call MoveTab(-1, v:count)<CR>
-" nnoremap <silent> <A-}> :<C-U>call MoveTab(+1, v:count)<CR>
-" nnoremap <silent> <A-[> gT
-" nnoremap <silent> <A-]> gt
-" 
-" nnoremap <A-h> <C-w>h
-" nnoremap <A-j> <C-w>j
-" nnoremap <A-k> <C-w>k
-" nnoremap <A-l> <C-w>l
-" 
-" nnoremap <A-H> <C-w>H
-" nnoremap <A-J> <C-w>J
-" nnoremap <A-K> <C-w>K
-" nnoremap <A-L> <C-w>L
-" 
-" tnoremap <silent> <A-{> <C-\><C-N>:<C-U>call MoveTab(-1, v:count)<CR>
-" tnoremap <silent> <A-}> <C-\><C-N>:<C-U>call MoveTab(+1, v:count)<CR>
-" tnoremap <silent> <A-[> <C-\><C-N>gT
-" tnoremap <silent> <A-]> <C-\><C-N>gt
-" 
-" tnoremap <A-h> <C-\><C-N><C-w>h
-" tnoremap <A-j> <C-\><C-N><C-w>j
-" tnoremap <A-k> <C-\><C-N><C-w>k
-" tnoremap <A-l> <C-\><C-N><C-w>l
-" 
-" tnoremap <A-H> <C-\><C-N><C-w>H
-" tnoremap <A-J> <C-\><C-N><C-w>J
-" tnoremap <A-K> <C-\><C-N><C-w>K
-" tnoremap <A-L> <C-\><C-N><C-w>L
-
 function! ReenterVisual()
     normal! gv
 endfunction
