@@ -242,6 +242,8 @@ nnoremap <leader>n :call ToggleLineNumbers()<CR>
 let s:comment_leaders = {
     \ 'c' : '//',
     \ 'cpp' : '//',
+    \ 'm' : '//',
+    \ 'mm' : '//',
     \ 'vim' : '"',
     \ 'python' : '#'
 \ }
@@ -253,6 +255,8 @@ function! RemoveCommentLeadersNormal(count)
         let cur_pos = getpos(".")
         let current_line = cur_pos[1]
 
+        " TODO: consider making the removal of the comment leader depend on
+        " whether or not the previous line has the leader.
         if getline(current_line) =~ '^\s*' . leader
             let lastline = current_line + (a:count == 0 ? 1 : a:count)
             let command = (current_line+1) . "," . lastline . 's/^\s*' . leader . "\s*//e"
@@ -260,8 +264,8 @@ function! RemoveCommentLeadersNormal(count)
         endif
 
         call setpos(".", cur_pos)
-
     endif
+
     exec "normal! " . (a:count+1) . "J"
 endfunction
 
@@ -572,6 +576,11 @@ function! IsTerm()
     return get(getwininfo(bufwinid(bufnr()))[0], 'terminal', 0)
 endfunction
 
+function! IsTermAlive()
+    let job = term_getjob(bufnr())
+    return job != v:null && job_status(job) != "dead"
+endfunction
+
 function! SwitchToOtherPaneOrCreate()
     let l:start_win = winnr()
     let l:layout = winlayout()
@@ -606,7 +615,7 @@ function! GotoLineFromTerm()
             let col_num  = components[2]
 
             call SwitchToOtherPaneOrCreate()
-            " NOTE: Might need to save current file
+            " NOTE: We might want to save the current file before switching
             exe "edit " . filepath
             call setpos(".", [0, line_num, col_num, 0])
             normal! zz
@@ -628,22 +637,37 @@ function! DoCommandsInTerm(commands)
     if !IsTerm()
         call SwitchToOtherPaneOrCreate()
     endif
-    exe "term++noclose ++curwin " . s:shell . ' "' . join(a:commands, " && ") . '"'
+
+    let all_commands = join(a:commands, " && ") . "\r\n"
+    if IsTermAlive()
+        if &shell == "/bin/zsh"
+            let all_commands .= "\<Esc>" . "cc" . all_commands . "i"
+        endif
+        call term_sendkeys(bufnr(), all_commands)
+    else
+        exe "term++noclose ++curwin " . s:shell . ' "' . all_commands . '"'
+    endif
+endfunction
+
+function! SearchAndRun(script_name)
+    " NOTE: I'm separating this out because it seems like it would be handy
+    " for running tests as well
+    let working_dir = split(getcwd(), s:path_separator)
+    while len(working_dir) > 0
+        let directory_path = s:path_separator . join(working_dir, s:path_separator)
+        if executable(directory_path . s:path_separator . a:script_name)
+            " One problem with this is that I can't scroll through the
+            " history to see all the errors from the beginning
+            call DoCommandsInTerm(["cd " . directory_path, a:script_name, "echo Compiled Successfully"])
+            return
+        endif
+        let working_dir = working_dir[:-2] " remove last path element
+    endwhile
+    echo "No file named \"" . a:script_name . "\" found"
 endfunction
 
 function! SearchAndCompile()
-    let l:working_dir = split(getcwd(), s:path_separator)
-    while len(l:working_dir) > 0
-        let l:directory_path = s:path_separator . join(l:working_dir, s:path_separator)
-        if executable(l:directory_path . s:path_separator . s:compile_script_name)
-            " One problem with this is that I can't scroll through the
-            " history to see all the errors from the beginning
-            call DoCommandsInTerm(["cd " . l:directory_path, s:compile_script_name, "echo Compiled Successfully"])
-            return
-        endif
-        let l:working_dir = l:working_dir[:-2] " remove last path element
-    endwhile
-    echo "No file named \"" . s:compile_script_name . "\" found"
+    call SearchAndRun(s:compile_script_name)
 endfunction
 
 nnoremap <silent> <leader>g :call GotoLineFromTerm()<CR>
@@ -717,47 +741,35 @@ function! GoToProjectOrMake(bang, path)
 endfunction
 command! -bang -nargs=1 -complete=customlist,ProjectsCompltionList  Project :call GoToProjectOrMake(<bang>0, <q-args>)
 
-function! WritingMode(parent_dir)
-    if len(a:parent_dir) > 0
-        let l:date = strftime("%e %b %Y") " Ex. 12 Aug 2020
-        let l:command = (bufname("%") == "" && !getbufvar("%", '&modified') ? 'edit ' : 'tabnew ') .
-                        \ (a:parent_dir. l:date . '.txt')
-        cd a:parent_dir
+" NOTE: testing possible custom operators
+nnoremap [ :set operatorfunc=DoAction<CR>g@
+vnoremap [ :<C-U>call DoAction(visualmode())<CR>
+
+let s:visual_modes = { 'v':1, 'V':1, '\<C-V>':1 }
+function! s:is_a_visual_mode(mode)
+    return has_key(s:visual_modes, a:mode)
+endfunction
+
+function! DoAction(visual)
+    let [start_mark, end_mark] = s:is_a_visual_mode(a:visual) ? ["'<", "'["] : ["'>", "']"]
+    let [start_line, start_column] = getpos(start_mark)[1:2]
+    let [  end_line,   end_column] = getpos(  end_mark)[1:2]
+
+    echo "Visual = " . a:visual . " | [" . start_line . ", " . start_column . "]" . " -> [" .   end_line . ", " .   end_column . "]"
+
+    if a:visual == 'V'
+    elseif a:visual == "\<C-V>"
+    elseif a:visual == 'v'
+    else " if a:visual == 'char'
+        " Normal mode
     endif
-
-    execute l:command
-    setlocal wrap linebreak
-    setlocal noundofile undolevels=0 undoreload=0
-    setlocal foldmethod=indent
 endfunction
 
-command! Writing call WritingMode('')
-command! Journal call WritingMode('~/Documents/Notes/Journal/')
 
-" Todo list and log of the day
-function! Log()
-
-    let l:start_win = winnr()
-    let l:layout = winlayout()
-    let l:command = (bufname("%") == "" &&
-                    \ !getbufvar("%", '&modified') ) ? 'edit' : 'tabnew'
-
-    execute l:command . ' ~/Documents/Notes/Daily-Log/Log-' . strftime("%e-%b-%Y") . '.txt'
-    
-    " Don't automatically reformat when I type special characters
-    setlocal cinkeys=
-    " When wrapping, indent by 7 characters, the length of the timestamp.
-    setlocal breakindentopt+=shift:8
-
-    nnoremap <silent> <buffer> o :call append(line("."), strftime("%H:%M \| "))<CR>jA
-    inoremap <silent> <buffer> <CR> <Esc>:call append(line("."), strftime("%H:%M \| "))<CR>jA
-
-    nnoremap <buffer> j gj
-    nnoremap <buffer> k gk
-
-endfunction
-command! Log call Log()
-
+" For machine specific additions changes
+if filereadable('~/.local/vimrc')
+    source '~/.local/vimrc'
+endif
 
 call plug#begin(s:dot_vim_path . '/plugins')
 
