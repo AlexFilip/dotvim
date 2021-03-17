@@ -521,6 +521,7 @@ hi CustomPurple      guifg=#950087 guibg=NONE ctermfg=90  ctermbg=NONE gui=none 
 " Common variables that may be needed by other functions
 let s:path_separator = has('win32') ? '\' : '/'
 
+" TODO: Make the headers project specific
 function! CreateSourceHeader()
     let file_name = expand('%:t')
     let file_extension = split(file_name, '\.')[1]
@@ -534,13 +535,11 @@ function! CreateSourceHeader()
                 \ '  Notice: (C) Copyright ' . year . ' by Alexandru Filip. All rights reserved.',
                 \ '*/',
                 \ ]
-                " \ '// ',
 
     call append(0, header)
 
-    if file_extension =~ '^[hH].*$'
-        let modified_filename = toupper(file_name)
-        let modified_filename = substitute(modified_filename, '[^A-Z]', '_', 'g')
+    if file_extension =~ '^[hH]\(pp\|PP\)\?$'
+        let modified_filename = substitute(toupper(file_name), '[^A-Z]', '_', 'g')
 
         let header = [
                     \ '#ifndef ' . modified_filename,
@@ -612,7 +611,7 @@ function! GotoLineFromTerm()
             let components = split(line_contents, ":")
             let filepath = components[0]
             let line_num = components[1]
-            let col_num  = components[2]
+            let  col_num = components[2]
 
             call SwitchToOtherPaneOrCreate()
             " NOTE: We might want to save the current file before switching
@@ -641,7 +640,7 @@ function! DoCommandsInTerm(commands)
     let all_commands = join(a:commands, " && ") . "\r\n"
     if IsTermAlive()
         if &shell == "/bin/zsh"
-            let all_commands .= "\<Esc>" . "cc" . all_commands . "i"
+            let all_commands = "\<Esc>" . "cc" . all_commands . "i"
         endif
         call term_sendkeys(bufnr(), all_commands)
     else
@@ -773,13 +772,18 @@ endif
 
 call plug#begin(s:dot_vim_path . '/plugins')
 
-Plug 'junegunn/vim-easy-align'
+" Languages
 Plug 'keith/swift.vim'
 Plug 'rust-lang/rust.vim'
+
+" Utilities
+Plug 'junegunn/vim-easy-align'
 Plug 'vim-utils/vim-man'
 Plug 'tpope/vim-surround'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-speeddating'
+
+" Git support
 Plug 'tpope/vim-fugitive'
 
 call plug#end()
