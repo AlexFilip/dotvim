@@ -1,13 +1,13 @@
 syntax on
 
 " Autoreload file
-set autoread       " automatically reload file when changed on disk
+set autoread " automatically reload file when changed on disk
 
 " Persistent Undo
 set undofile                  " Save undos after file closes
 set undolevels=1000           " How many undos
 set undoreload=10000          " number of lines to save for undo
-set undodir=$VIMRUNTIME/undos " where to save undo histories
+set undodir=$HOME/.local/vim-undos " where to save undo histories
 
 " Miscellaneous
 set splitright        " Vertical split goes right, not left
@@ -17,18 +17,21 @@ set noshowmode        " Don't show -- INSERT --
 set mouse=a           " Allow mouse input
 set sidescroll=1      " Number of columns to scroll left and right
 set backspace=indent  " allow backspacing only over automatic indenting (:help 'backspace')
-set shell=/bin/zsh    " Shell to launch in terminal (see if you can make this built in)
 set showtabline=2     " 0 = never show tabline, 1 = when more than one tab, 2 = always
 set laststatus=0      " Whether or not to show the status line. Values same as showtabline
 set clipboard=unnamed " Use system clipboard
 set wildmenu          " Display a menu of all completions for commands when pressing tab
 
-set wrap linebreak breakindent " Don't wrap long lines
+set wrap linebreak breakindent " Wrap long lines
 set breakindentopt=shift:0,min:20
 set formatoptions+=n 
 
 set nofixendofline    " Don't insert an end of line at the end of the file
 set noeol             " Give it a mean look so it understands
+
+if !has('win32') && executable('/bin/zsh')
+    set shell=/bin/zsh " Shell to launch in terminal
+endif
 
 " Indenting
 set tabstop=4 shiftwidth=0 softtabstop=-1 expandtab
@@ -42,6 +45,23 @@ set display=lastline " For writing prose
 set noswapfile
 
 let s:dot_vim_path = fnamemodify(expand("$MYVIMRC"), ":p:h")
+
+call plug#begin(s:dot_vim_path . '/plugins')
+
+" Languages
+Plug 'keith/swift.vim'
+Plug 'rust-lang/rust.vim'
+
+" Utilities
+Plug 'junegunn/vim-easy-align'
+Plug 'tpope/vim-surround'
+Plug 'tpope/vim-repeat'
+Plug 'tpope/vim-speeddating'
+
+" Git support
+Plug 'tpope/vim-fugitive'
+
+call plug#end()
 
 filetype plugin on
 colorscheme custom
@@ -60,40 +80,6 @@ augroup WrapLines
     autocmd!
     autocmd FileType {txt,org,tex} setlocal wrap linebreak nolist
 augroup END
-
-function! s:flat_map(list, transformer)
-    call assert_true(type(a:list) == v:t_list)
-    let result = []
-    for elem in a:list
-        let transformed = a:transformer(elem)
-        if type(transformed) == v:t_list
-            call extend(result, a:transformer(elem))
-        else
-            echoerr "transformer in flatmap returned value of type " . type(transformed) . ". Expected list."
-        endif
-    endfor
-    return result
-endfunction
-
-function! s:filter_list(list, predicate)
-    call assert_true(type(a:list) == v:t_list)
-    let result = []
-    for elem in a:list
-        if a:predicate(elem)
-            call add(result, elem)
-        endif
-    endfor
-    return result
-endfunction
-
-function! s:reduce(initial, list, reducer)
-    call assert_true(type(a:list) == v:t_list)
-    let result = a:initial
-    for elem in a:list
-        let result = a:reducer(result, elem)
-    endfor
-    return result
-endfunction
 
 function! AddToPath(...)
     for x in a:000
@@ -222,6 +208,7 @@ cnoremap <C-d> <Del>
 vnoremap <C-J> :m '>+1<CR>gv=gv
 vnoremap <C-K> :m '<-2<CR>gv=gv
 
+" Horizontal scrolling. Only useful when wrap is turned off.
 nnoremap <C-J> zl
 nnoremap <C-H> zh
 
@@ -325,6 +312,7 @@ let &t_EI.="\e[2 q" " Normal mode
 " Directory tree listing options
 let g:netrw_liststyle = 1
 let g:netrw_banner = 0
+let g:netrw_keepdir = 0
 
 " Docs: http://vimhelp.appspot.com/eval.txt.html
 set fillchars=stlnc:\|,vert:\|,fold:.,diff:.
@@ -363,54 +351,54 @@ let s:timeformat = has('win32') ? '%H:%M' : '%k:%M'
 function! Tabs() abort
     " NOTE: getbufinfo() gets all variables of all buffers
     " Colours
-    let l:cur_tab_page = tabpagenr()
-    let l:n_tabs = tabpagenr("$")
-    let l:max_file_name_length = 30
+    let cur_tab_page = tabpagenr()
+    let n_tabs = tabpagenr("$")
+    let max_file_name_length = 30
 
     " NOTE: Repeat is used to pre-allocate space, make sure that this is the
     " correct number of characters, otherwise you'll get an error
-    let l:num_prefixes = 3
-    let l:strings_per_tab = 7
-    let l:s = repeat(['EMPTY!!!'], l:num_prefixes + l:n_tabs * l:strings_per_tab + 3)
+    let num_prefixes = 3
+    let strings_per_tab = 7
+    let s = repeat(['EMPTY!!!'], num_prefixes + n_tabs * strings_per_tab + 3)
 
     " TODO: Make this a different colour
-    let l:s[0] = " "
-    let l:s[1] = GetCurrentMode()
-    let l:s[2] = " "
+    let s[0] = " "
+    let s[1] = GetCurrentMode()
+    let s[2] = " "
     " Previously this was initialized to an empty list and I was using
     " extend() to add elements
-    " let l:s = [] " Not sure if a list is faster than a string but there is no stringbuilder in vimscript
+    " let s = [] " Not sure if a list is faster than a string but there is no stringbuilder in vimscript
 
-    for i in range(l:n_tabs)
-        let l:n = i + 1
-        let l:bufnum = tabpagebuflist(l:n)[tabpagewinnr(l:n) - 1]
+    for i in range(n_tabs)
+        let n = i + 1
+        let bufnum = tabpagebuflist(n)[tabpagewinnr(n) - 1]
 
         " %<num>T specifies the beginning of a tab
-        let l:s[l:num_prefixes + i * l:strings_per_tab + 0] = "%"
-        let l:s[l:num_prefixes + i * l:strings_per_tab + 1] = l:n
+        let s[num_prefixes + i * strings_per_tab + 0] = "%"
+        let s[num_prefixes + i * strings_per_tab + 1] = n
 
-        let l:s[l:num_prefixes + i * l:strings_per_tab + 2] = n == l:cur_tab_page ? "T%#TabLineSel# " : "T%#TabLine# "
+        let s[num_prefixes + i * strings_per_tab + 2] = n == cur_tab_page ? "T%#TabLineSel# " : "T%#TabLine# "
 
-        let l:s[l:num_prefixes + i * l:strings_per_tab + 3] = l:n
+        let s[num_prefixes + i * strings_per_tab + 3] = n
 
         " '-' for non-modifiable buffer, '+' for modified, ':' otherwise
-        let l:modifiable = getbufvar(l:bufnum, "&modifiable")
-        let l:modified   = getbufvar(l:bufnum, "&modified")
-        let l:s[l:num_prefixes + i * l:strings_per_tab + 4] = !l:modifiable ?  "- " : l:modified ? "* " : ": "
+        let modifiable = getbufvar(bufnum, "&modifiable")
+        let modified   = getbufvar(bufnum, "&modified")
+        let s[num_prefixes + i * strings_per_tab + 4] = !modifiable ?  "- " : modified ? "* " : ": "
 
-        let l:name = bufname(l:bufnum)
-        let l:s[l:num_prefixes + i * l:strings_per_tab + 5] = l:name == "" ? "[New file]" : (len(l:name) >= l:max_file_name_length ? "<" . l:name[-l:max_file_name_length:] : l:name)
+        let name = bufname(bufnum)
+        let s[num_prefixes + i * strings_per_tab + 5] = name == "" ? "[New file]" : (len(name) >= max_file_name_length ? "<" . name[-max_file_name_length:] : name)
 
-        let l:s[l:num_prefixes + i * l:strings_per_tab + 6] = " "
+        let s[num_prefixes + i * strings_per_tab + 6] = " "
     endfor
 
     " %= is the separator between left and right side of tabline
     " %T specifies the end of the last tab
-    let l:s[-3] = "%T%#TabLineFill#%=%#TabLineSel# "
-    let l:s[-2] = strftime(s:timeformat)
-    let l:s[-1] = ' '
+    let s[-3] = "%T%#TabLineFill#%=%#TabLineSel# "
+    let s[-2] = strftime(s:timeformat)
+    let s[-1] = ' '
 
-    return join(l:s, "")
+    return join(s, "")
 endfunction
 
 " Can type unicode codepoints with C-V u <codepoint> (ex. 2002)
@@ -528,11 +516,22 @@ function! CreateSourceHeader()
     let date = strftime("%d %B %Y")
     let year = strftime("%Y")
     
+    " TODO: Figure out how I'll make this work
+    " \ 'header' : [
+    " \     '/*',
+    " \     '  File: %:t',
+    " \     '  Date: %d %B %Y',
+    " \     '  Creator: Alexandru Filip',
+    " \     '  Notice: (C) Copyright %Y by Alexandru Filip. All rights reserved.',
+    " \     '*/'
+    " \ ]
+
+    " \ '  Notice: (C) Copyright ' . year . ' by Alexandru Filip. All rights reserved.',
+
     let header = ['/*',
                 \ '  File: ' . file_name,
                 \ '  Date: ' . date,
                 \ '  Creator: Alexandru Filip',
-                \ '  Notice: (C) Copyright ' . year . ' by Alexandru Filip. All rights reserved.',
                 \ '*/',
                 \ ]
 
@@ -541,7 +540,7 @@ function! CreateSourceHeader()
     if file_extension =~ '^[hH]\(pp\|PP\)\?$'
         let modified_filename = substitute(toupper(file_name), '[^A-Z]', '_', 'g')
 
-        let header = [
+        let guard = [
                     \ '#ifndef ' . modified_filename,
                     \ '#define ' . modified_filename,
                     \ '',
@@ -549,7 +548,7 @@ function! CreateSourceHeader()
                     \ '',
                     \ '#endif',
                     \ ]
-        call append(line("$"), header)
+        call append(line("$"), guard)
 
         let pos = getpos("$")
         let pos[1] -= 2
@@ -562,14 +561,12 @@ augroup FileHeaders
     autocmd BufNewFile *.c,*.cpp,*.h,*.hpp call CreateSourceHeader()
 augroup END
 
-" ============================================
-"  Terminal commands
-" ============================================
+" = Terminal commands ========================
 
 " Search for a script named "build.bat" moving up from the current path and run it.
 " TODO: find out how to compile through vim on windows
 let s:compile_script_name = has('win32') ? 'build.bat' : './compile'
-let s:shell = has('win32') ? '++shell' : '/bin/zsh -c'
+let s:shell = has('win32') ? '++shell' : &shell . ' -c'
 
 function! IsTerm()
     return get(getwininfo(bufwinid(bufnr()))[0], 'terminal', 0)
@@ -608,10 +605,7 @@ function! GotoLineFromTerm()
         let regex = '^[A-Za-z0-9/\-\.]\+:[0-9]\+:[0-9]\+:'
 
         if match(line_contents, regex) != -1
-            let components = split(line_contents, ":")
-            let filepath = components[0]
-            let line_num = components[1]
-            let  col_num = components[2]
+            let [filepath, line_num, col_num] = split(line_contents, ":")[:2]
 
             call SwitchToOtherPaneOrCreate()
             " NOTE: We might want to save the current file before switching
@@ -621,11 +615,10 @@ function! GotoLineFromTerm()
         else
             echo "Line does not match known error message format (" . regex . ")"
         endif
-
     endif
 endfunction
 
-function! DoCommandsInTerm(commands)
+function! DoCommandsInTerm(shell, commands, parent_dir, message)
     " Currently, this assumes you only have one split and uses only the top-most
     " part of the layout as the guide.
 
@@ -637,14 +630,25 @@ function! DoCommandsInTerm(commands)
         call SwitchToOtherPaneOrCreate()
     endif
 
-    let all_commands = join(a:commands, " && ") . "\r\n"
+    let all_commands = ""
+
+    if a:parent_dir isnot 0
+        let all_commands .= "cd '" . a:parent_dir . "' && "
+    endif
+
+    let all_commands .= a:commands
+
+    if a:message isnot 0
+        let all_commands .= " && echo " . a:message
+    endif
+
     if IsTermAlive()
-        if &shell == "/bin/zsh"
-            let all_commands = "\<Esc>" . "cc" . all_commands . "i"
+        if a:shell == "/bin/zsh"
+            let all_commands = "\<Esc>" . "cc" . all_commands . "i\r\n"
         endif
         call term_sendkeys(bufnr(), all_commands)
     else
-        exe "term++noclose ++curwin " . s:shell . ' "' . all_commands . '"'
+        exe "term++noclose ++curwin " . a:shell . ' "' . all_commands . '"'
     endif
 endfunction
 
@@ -657,7 +661,7 @@ function! SearchAndRun(script_name)
         if executable(directory_path . s:path_separator . a:script_name)
             " One problem with this is that I can't scroll through the
             " history to see all the errors from the beginning
-            call DoCommandsInTerm(["cd " . directory_path, a:script_name, "echo Compiled Successfully"])
+            call DoCommandsInTerm(a:shell, a:script_name, directory_path, "Compiled Successfully")
             return
         endif
         let working_dir = working_dir[:-2] " remove last path element
@@ -672,11 +676,30 @@ endfunction
 nnoremap <silent> <leader>g :call GotoLineFromTerm()<CR>
 nnoremap <silent> <leader>c :call SearchAndCompile()<CR>
 
-function! RenameFiles()
-    let l:file_list = split(system("ls"), '\n')
+" = Man =================================
 
+function! ManEntry(name)
+    let command = "man " . a:name
+    if !IsTerm()
+        call SwitchToOtherPaneOrCreate()
+    endif
+
+    if IsTermAlive()
+        wincmd v
+        wincmd l
+    endif
+
+    exe "term++curwin ++close " . command
+endfunction
+command! -nargs=1 Man :call ManEntry(<q-args>)
+
+" =======================================
+
+function! RenameFiles()
     " Empty lines are allowed
     let l:lines = filter(getline(1, '$'), {idx, val -> len(val) > 0})
+    let l:file_list = split(system("ls"), '\n')
+
     if len(l:lines) != len(l:file_list)
         echoerr "Number of lines in buffer (" . len(l:lines) .
               \ ") does not match number of files in current directory (" . 
@@ -703,87 +726,157 @@ function! RenameFiles()
 endfunction
 command! RenameFiles :call RenameFiles()
 
+" = Projects ==================================
+
+" NOTE: Option idea for project:
+"   C/C++ with compile scripts and main
+"   Client projects (compile scripts and a folder inside with the actual code)
+" TODO: Project files in json format to get
 let s:projects_folder="~/projects"
 function! ProjectsCompltionList(ArgLead, CmdLine, CursorPos)
-    let result = []
-    let arg_match = "^" . a:ArgLead . ".*"
+    if a:ArgLead =~ '^-.\+' || a:ArgLead =~ '^++.\+'
+        " TODO: command completion for options
+    else
+        let result = []
+        let arg_match = "^" . a:ArgLead . ".*"
 
-    for path in split(globpath(s:projects_folder, "*"), "\n")
-        if isdirectory(path)
-            let folder_name = split(path, "/")[-1]
-            if folder_name =~ arg_match
-                call add(result, folder_name)
+        for path in split(globpath(s:projects_folder, "*"), "\n")
+            if isdirectory(path)
+                let folder_name = split(path, "/")[-1]
+                if folder_name =~ arg_match
+                    call add(result, folder_name)
+                endif
             endif
-        endif
-    endfor
+        endfor
 
-    return result
+        return result
+    endif
 endfunction
 
-function! GoToProjectOrMake(bang, path)
-    exec "cd " . s:projects_folder
-    if !isdirectory(a:path)
-        if filereadable(a:path)
-            if a:bang
-                call delete(a:path)
-            else
-                echoerr a:path . " exists and is not a directory. Use Project! to replace it with a new project."
-                return
-            endif
-        endif
-        echo a:path . " does not exist. Creating."
-        call mkdir(a:path)
-    endif
+let s:default_project_file = {
+    \ 'header' : [
+    \     '/*',
+    \     '  File: %:t',
+    \     '  Date: %d %B %Y',
+    \     '  Creator: Alexandru Filip',
+    \     '  Notice: (C) Copyright %Y by Alexandru Filip. All rights reserved.',
+    \     '*/'
+    \ ]
+\ }
 
-    exec "cd " . a:path
-    edit .
+
+function! GoToProjectOrMake(bang, command_line)
+    let path_start = 0
+
+    let options = []
+
+    while path_start < len(a:command_line)
+        if match(a:command_line, '++', path_start) == path_start
+            let path_start += 2
+        elseif match(a:command_line, '-', path_start) == path_start
+            let path_start += 1
+        else
+            break
+        endif
+
+        let option_end = match(a:command_line, '[ \t]\|$', path_start)
+        let l:option = a:command_line[path_start:option_end-1]
+        call add(options, l:option)
+
+        let path_start = match(a:command_line, '[^ \t]\|$', option_end)
+    endwhile
+
+    let project_name = a:command_line[path_start:]
+
+    if len(project_name) != 0
+        exec "cd " . s:projects_folder
+        if !isdirectory(project_name)
+            if filereadable(project_name)
+                if a:bang
+                    call delete(project_name)
+                else
+                    echoerr project_name . " exists and is not a directory. Use Project! to replace it with a new project."
+                    return
+                endif
+            endif
+            echo "Created new project called \"" .  project_name . "\""
+            call mkdir(project_name)
+        endif
+
+        exec "cd " . project_name
+        edit .
+    else
+        echoerr "No project name specified"
+        return
+    endif
 endfunction
 command! -bang -nargs=1 -complete=customlist,ProjectsCompltionList  Project :call GoToProjectOrMake(<bang>0, <q-args>)
 
-" NOTE: testing possible custom operators
-nnoremap [ :set operatorfunc=DoAction<CR>g@
-vnoremap [ :<C-U>call DoAction(visualmode())<CR>
+" = RFC =======================================
+function! GetRFC(num)
+    if a:num =~ '^[0-9]\+$'
+        let num = a:num
+        if len(num) < 4
+            if num == '0'
+                let num = '000'
+            else
+                let num = repeat('0', 4 - len(num)) . l:num
+            endif
+        endif
+        let rfc_name = 'rfc' . l:num . '.txt'
+        let rfc_path = g:rfc_download_location . '/' . rfc_name
+
+        if filereadable(rfc_path)
+            call SwitchToOtherPaneOrCreate()
+            execute "edit " . rfc_path
+        elseif executable('curl')
+            if !isdirectory(g:rfc_download_location)
+                call mkdir(g:rfc_download_location)
+            endif
+            echo "Downloading"
+            call system('curl https://www.ietf.org/rfc/' . rfc_name . " -o '" . rfc_path . "'")
+
+            call SwitchToOtherPaneOrCreate()
+            execute "edit " . rfc_path
+        else
+            echoerr "curl is not installed on this machine"
+        endif
+    else
+        echoerr '"' . a:num . '" is not a number'
+    endif
+endfunction
+command! -nargs=1 RFC :call GetRFC(<q-args>)
+
+" Can change this in the machine specific vimrc
+let g:rfc_download_location = $HOME . '/RFC-downloads'
+
+" =============================================
 
 let s:visual_modes = { 'v':1, 'V':1, '\<C-V>':1 }
 function! s:is_a_visual_mode(mode)
     return has_key(s:visual_modes, a:mode)
 endfunction
 
-function! DoAction(visual)
-    let [start_mark, end_mark] = s:is_a_visual_mode(a:visual) ? ["'<", "'["] : ["'>", "']"]
-    let [start_line, start_column] = getpos(start_mark)[1:2]
-    let [  end_line,   end_column] = getpos(  end_mark)[1:2]
-
-    echo "Visual = " . a:visual . " | [" . start_line . ", " . start_column . "]" . " -> [" .   end_line . ", " .   end_column . "]"
-
-    if a:visual == 'V'
-    elseif a:visual == "\<C-V>"
-    elseif a:visual == 'v'
-    else " if a:visual == 'char'
-        " Normal mode
-    endif
-endfunction
-
+" NOTE: testing possible custom operators
+" nnoremap [ :set operatorfunc=DoAction<CR>g@
+" vnoremap [ :<C-U>call DoAction(visualmode())<CR>
+" 
+" function! DoAction(visual)
+"     let [start_mark, end_mark] = s:is_a_visual_mode(a:visual) ? ["'<", "'["] : ["'>", "']"]
+"     let [start_line, start_column] = getpos(start_mark)[1:2]
+"     let [  end_line,   end_column] = getpos(  end_mark)[1:2]
+" 
+"     echo "Visual = " . a:visual . " | [" . start_line . ", " . start_column . "]" . " -> [" .   end_line . ", " .   end_column . "]"
+" 
+"     if a:visual == 'V'
+"     elseif a:visual == "\<C-V>"
+"     elseif a:visual == 'v'
+"     else " if a:visual == 'char'
+"         " Normal mode
+"     endif
+" endfunction
 
 " For machine specific additions changes
 if filereadable('~/.local/vimrc')
     source '~/.local/vimrc'
 endif
-
-call plug#begin(s:dot_vim_path . '/plugins')
-
-" Languages
-Plug 'keith/swift.vim'
-Plug 'rust-lang/rust.vim'
-
-" Utilities
-Plug 'junegunn/vim-easy-align'
-Plug 'vim-utils/vim-man'
-Plug 'tpope/vim-surround'
-Plug 'tpope/vim-repeat'
-Plug 'tpope/vim-speeddating'
-
-" Git support
-Plug 'tpope/vim-fugitive'
-
-call plug#end()
