@@ -119,7 +119,7 @@ function! MoveTab(multiplier, count)
 
         let l:cmd .= a:multiplier * l:amount
         " echo "Moving Tabs " . l:cmd
-        exec l:cmd
+        execute l:cmd
     endif
 endfunction
 
@@ -160,7 +160,7 @@ if !has('win32')
         else
             let prev_command = "tabnew \|"
         endif
-        exe prev_command . " terminal " . a:options . " ++noclose " . s:debugger
+        execute prev_command . " terminal " . a:options . " ++noclose " . s:debugger
     endfunction
     nnoremap <silent> ghd :call LaunchDebugger(1, "")<CR>
     nnoremap <silent> gcd :call LaunchDebugger(0, "++curwin")<CR>
@@ -247,13 +247,13 @@ function! RemoveCommentLeadersNormal(count)
         if getline(current_line) =~ '^\s*' . leader
             let lastline = current_line + (a:count == 0 ? 1 : a:count)
             let command = (current_line+1) . "," . lastline . 's/^\s*' . leader . "\s*//e"
-            exec command
+            execute command
         endif
 
         call setpos(".", cur_pos)
     endif
 
-    exec "normal! " . (a:count+1) . "J"
+    execute "normal! " . (a:count+1) . "J"
 endfunction
 
 function! RemoveCommentLeadersVisual() range
@@ -262,7 +262,7 @@ function! RemoveCommentLeadersVisual() range
         " echo leader
         if getline(a:firstline) =~ '^\s*' . leader
             let command = (a:firstline+1) . "," . a:lastline . 's/^\s*' . leader . '\s*//e'
-            exec command
+            execute command
         endif
 
         normal! gvJ
@@ -566,7 +566,6 @@ augroup END
 " Search for a script named "build.bat" moving up from the current path and run it.
 " TODO: find out how to compile through vim on windows
 let s:compile_script_name = has('win32') ? 'build.bat' : './compile'
-let s:shell = has('win32') ? '++shell' : &shell . ' -c'
 
 function! IsTerm()
     return get(getwininfo(bufwinid(bufnr()))[0], 'terminal', 0)
@@ -602,14 +601,22 @@ endfunction
 function! GotoLineFromTerm()
     if IsTerm()
         let line_contents = getline(".")
-        let regex = '^[A-Za-z0-9/\-\.]\+:[0-9]\+:[0-9]\+:'
+        let regex = '^[A-Za-z0-9/\-\.]\+:[0-9]\+:'
+        " [0-9]\+:
 
         if match(line_contents, regex) != -1
             let [filepath, line_num, col_num] = split(line_contents, ":")[:2]
 
+            let line_num = str2nr(line_num)
+            if col_num =~ '^[0-9]\+'
+                let col_num = str2nr(col_num)
+            else
+                let col_num = 0
+            endif
+
             call SwitchToOtherPaneOrCreate()
             " NOTE: We might want to save the current file before switching
-            exe "edit " . filepath
+            execute "edit " . filepath
             call setpos(".", [0, line_num, col_num, 0])
             normal! zz
         else
@@ -630,25 +637,26 @@ function! DoCommandsInTerm(shell, commands, parent_dir, message)
         call SwitchToOtherPaneOrCreate()
     endif
 
-    let all_commands = ""
+    let all_commands = a:commands
 
     if a:parent_dir isnot 0
-        let all_commands .= "cd '" . a:parent_dir . "' && "
+        let all_commands = 'cd "' . a:parent_dir . '" && ' . all_commands
     endif
 
-    let all_commands .= a:commands
-
     if a:message isnot 0
-        let all_commands .= " && echo " . a:message
+        let all_commands .= ' && echo ' . a:message
     endif
 
     if IsTermAlive()
-        if a:shell == "/bin/zsh"
-            let all_commands = "\<Esc>" . "cc" . all_commands . "i\r\n"
+        if get(job_info(term_getjob(bufnr())), 'cmd', [''])[0] =~ 'zsh'
+            let all_commands = "\<Esc>" . "cc" . all_commands . "\r\n"
         endif
+
         call term_sendkeys(bufnr(), all_commands)
     else
-        exe "term++noclose ++curwin " . a:shell . ' "' . all_commands . '"'
+        let cmd = "terminal++noclose ++curwin " . a:shell . " " . all_commands
+        echo cmd
+        execute cmd
     endif
 endfunction
 
@@ -661,7 +669,7 @@ function! SearchAndRun(script_name)
         if executable(directory_path . s:path_separator . a:script_name)
             " One problem with this is that I can't scroll through the
             " history to see all the errors from the beginning
-            call DoCommandsInTerm(a:shell, a:script_name, directory_path, "Compiled Successfully")
+            call DoCommandsInTerm('++shell', a:script_name, directory_path, "Compiled Successfully")
             return
         endif
         let working_dir = working_dir[:-2] " remove last path element
@@ -680,16 +688,17 @@ nnoremap <silent> <leader>c :call SearchAndCompile()<CR>
 
 function! ManEntry(name)
     let command = "man " . a:name
-    if !IsTerm()
-        call SwitchToOtherPaneOrCreate()
-    endif
+    " if !IsTerm()
+    "     call SwitchToOtherPaneOrCreate()
+    " endif
 
-    if IsTermAlive()
-        wincmd v
-        wincmd l
-    endif
+    " if IsTermAlive()
+    "     wincmd v
+    "     wincmd l
+    " endif
 
-    exe "term++curwin ++close " . command
+    " ++curwin
+    execute "vertical term ++close " . command
 endfunction
 command! -nargs=1 Man :call ManEntry(<q-args>)
 
@@ -764,10 +773,8 @@ let s:default_project_file = {
     \ ]
 \ }
 
-
 function! GoToProjectOrMake(bang, command_line)
     let path_start = 0
-
     let options = []
 
     while path_start < len(a:command_line)
@@ -789,28 +796,39 @@ function! GoToProjectOrMake(bang, command_line)
     let project_name = a:command_line[path_start:]
 
     if len(project_name) != 0
-        exec "cd " . s:projects_folder
+        execute 'cd ' . s:projects_folder
         if !isdirectory(project_name)
             if filereadable(project_name)
                 if a:bang
                     call delete(project_name)
                 else
-                    echoerr project_name . " exists and is not a directory. Use Project! to replace it with a new project."
+                    echoerr project_name . ' exists and is not a directory. Use Project! to replace it with a new project.'
                     return
                 endif
             endif
-            echo "Created new project called \"" .  project_name . "\""
+            echo 'Created new project called "' .  project_name . '"'
             call mkdir(project_name)
         endif
 
-        exec "cd " . project_name
+        execute 'cd ' . project_name
         edit .
     else
-        echoerr "No project name specified"
+        echoerr 'No project name specified'
         return
     endif
 endfunction
 command! -bang -nargs=1 -complete=customlist,ProjectsCompltionList  Project :call GoToProjectOrMake(<bang>0, <q-args>)
+
+
+" = Search ====================================
+
+function! SearchFolder(searchTerm)
+    let searchTerm = a:searchTerm
+    let searchTerm = substitute(searchTerm, '\\', '\\\\', 'g')
+    let searchTerm = '"' . substitute(searchTerm, '"', '\"', 'g') . '" .'
+    call DoCommandsInTerm('grep -REn', searchTerm, 0, 0)
+endfunction
+command! -nargs=1 Search :call SearchFolder(<q-args>)
 
 " = RFC =======================================
 function! GetRFC(num)
@@ -828,18 +846,18 @@ function! GetRFC(num)
 
         if filereadable(rfc_path)
             call SwitchToOtherPaneOrCreate()
-            execute "edit " . rfc_path
+            execute 'edit ' . rfc_path
         elseif executable('curl')
             if !isdirectory(g:rfc_download_location)
                 call mkdir(g:rfc_download_location)
             endif
-            echo "Downloading"
+            echo 'Downloading'
             call system('curl https://www.ietf.org/rfc/' . rfc_name . " -o '" . rfc_path . "'")
 
             call SwitchToOtherPaneOrCreate()
-            execute "edit " . rfc_path
+            execute 'edit ' . rfc_path
         else
-            echoerr "curl is not installed on this machine"
+            echoerr 'curl is not installed on this machine'
         endif
     else
         echoerr '"' . a:num . '" is not a number'
@@ -877,6 +895,6 @@ endfunction
 " endfunction
 
 " For machine specific additions changes
-if filereadable('~/.local/vimrc')
-    source '~/.local/vimrc'
+if filereadable($HOME . '/.local/vimrc')
+    source ~/.local/vimrc
 endif
