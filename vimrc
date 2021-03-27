@@ -84,7 +84,7 @@ augroup END
 function! AddToPath(...)
     for x in a:000
         if $PATH !~ x
-            let $PATH = x . ':' . $PATH
+            let $PATH = join([x, ':', $PATH], "")
         endif
     endfor
 endfunction
@@ -111,13 +111,13 @@ function! MoveTab(multiplier, count)
     endif
 
     if l:amount != 0
-        let l:cmd = 'tabmove '
+        let cmd = ['tabmove ', '', a:multiplier * l:amount]
 
         if a:multiplier > 0
-            let l:cmd .= '+'
+            let cmd[1] = '+'
         endif
 
-        let l:cmd .= a:multiplier * l:amount
+        let cmd = join(cmd, "")
         " echo "Moving Tabs " . l:cmd
         execute l:cmd
     endif
@@ -160,7 +160,7 @@ if !has('win32')
         else
             let prev_command = "tabnew \|"
         endif
-        execute prev_command . " terminal " . a:options . " ++noclose " . s:debugger
+        execute join([prev_command, " terminal ", a:options, " ++noclose ", s:debugger], "")
     endfunction
     nnoremap <silent> ghd :call LaunchDebugger(1, "")<CR>
     nnoremap <silent> gcd :call LaunchDebugger(0, "++curwin")<CR>
@@ -246,14 +246,14 @@ function! RemoveCommentLeadersNormal(count)
         " whether or not the previous line has the leader.
         if getline(current_line) =~ '^\s*' . leader
             let lastline = current_line + (a:count == 0 ? 1 : a:count)
-            let command = (current_line+1) . "," . lastline . 's/^\s*' . leader . "\s*//e"
+            let command = join([(current_line+1), ",", lastline, 's/^\s*', leader, "\s*//e"], "")
             execute command
         endif
 
         call setpos(".", cur_pos)
     endif
 
-    execute "normal! " . (a:count+1) . "J"
+    execute join(["normal! ", (a:count+1), "J"], "")
 endfunction
 
 function! RemoveCommentLeadersVisual() range
@@ -261,7 +261,7 @@ function! RemoveCommentLeadersVisual() range
         let leader = substitute(s:comment_leaders[&filetype], '\/', '\\/', 'g')
         " echo leader
         if getline(a:firstline) =~ '^\s*' . leader
-            let command = (a:firstline+1) . "," . a:lastline . 's/^\s*' . leader . '\s*//e'
+            let command = join([(a:firstline + 1), ",", a:lastline, 's/^\s*', leader, '\s*//e'], "")
             execute command
         endif
 
@@ -620,7 +620,7 @@ function! GotoLineFromTerm()
             call setpos(".", [0, line_num, col_num, 0])
             normal! zz
         else
-            echo "Line does not match known error message format (" . regex . ")"
+            echo join(["Line does not match known error message format (", regex, ")"], "")
         endif
     endif
 endfunction
@@ -640,7 +640,7 @@ function! DoCommandsInTerm(shell, commands, parent_dir, message)
     let all_commands = a:commands
 
     if a:parent_dir isnot 0
-        let all_commands = 'cd "' . a:parent_dir . '" && ' . all_commands
+        let all_commands = join(['cd "', a:parent_dir, '" && ', all_commands], "")
     endif
 
     if a:message isnot 0
@@ -649,12 +649,12 @@ function! DoCommandsInTerm(shell, commands, parent_dir, message)
 
     if IsTermAlive()
         if get(job_info(term_getjob(bufnr())), 'cmd', [''])[0] =~ 'zsh'
-            let all_commands = "\<Esc>" . "cc" . all_commands . "\r\n"
+            let all_commands = join(["\<Esc>cc", all_commands, "\r\n"], "")
         endif
 
         call term_sendkeys(bufnr(), all_commands)
     else
-        let cmd = "terminal++noclose ++curwin " . a:shell . " " . all_commands
+        let cmd = join(["terminal++noclose ++curwin", a:shell, all_commands], " ")
         echo cmd
         execute cmd
     endif
@@ -663,10 +663,12 @@ endfunction
 function! SearchAndRun(script_name)
     " NOTE: I'm separating this out because it seems like it would be handy
     " for running tests as well
-    let working_dir = split(getcwd(), s:path_separator)
+    let working_dir = [""]
+    call extend(working_dir, split(getcwd(), s:path_separator))
+
     while len(working_dir) > 0
-        let directory_path = s:path_separator . join(working_dir, s:path_separator)
-        if executable(directory_path . s:path_separator . a:script_name)
+        let directory_path = join(working_dir, s:path_separator)
+        if executable(join([directory_path, s:path_separator, a:script_name], ""))
             " One problem with this is that I can't scroll through the
             " history to see all the errors from the beginning
             call DoCommandsInTerm('++shell', a:script_name, directory_path, "Compiled Successfully")
@@ -674,7 +676,7 @@ function! SearchAndRun(script_name)
         endif
         let working_dir = working_dir[:-2] " remove last path element
     endwhile
-    echo "No file named \"" . a:script_name . "\" found"
+    echo join(["No file named \"", a:script_name, "\" found"], "")
 endfunction
 
 function! SearchAndCompile()
@@ -687,7 +689,6 @@ nnoremap <silent> <leader>c :call SearchAndCompile()<CR>
 " = Man =================================
 
 function! ManEntry(name)
-    let command = "man " . a:name
     " if !IsTerm()
     "     call SwitchToOtherPaneOrCreate()
     " endif
@@ -698,7 +699,7 @@ function! ManEntry(name)
     " endif
 
     " ++curwin
-    execute "vertical term ++close " . command
+    execute "vertical term ++close man " . a:name
 endfunction
 command! -nargs=1 Man :call ManEntry(<q-args>)
 
@@ -710,21 +711,20 @@ function! RenameFiles()
     let l:file_list = split(system("ls"), '\n')
 
     if len(l:lines) != len(l:file_list)
-        echoerr "Number of lines in buffer (" . len(l:lines) .
-              \ ") does not match number of files in current directory (" . 
-              \ len(l:file_list) . ")"
-
+        echoerr join(["Number of lines in buffer (", len(l:lines),
+                    \ ") does not match number of files in current directory (", 
+                    \ len(l:file_list), ")"], "")
         return
     endif
 
-    let l:commands = repeat([''], len(l:file_list))
+    let commands = repeat([''], len(l:file_list))
     for index in range(len(l:file_list))
         " TODO: replace characters that need escaping with \char
-        let l:commands[index] = "mv \"" . l:file_list[index] . "\" \"" . l:lines[index] . "\""
+        let commands[index] = join(["mv \"", l:file_list[index], "\" \"", l:lines[index], "\""], "")
     endfor
 
     normal ggdG
-    put =l:commands
+    put =commands
 
     " I would still have to make sure that all of the appropriate characters
     " in the filename, like quotes, are escaped.
@@ -747,7 +747,7 @@ function! ProjectsCompltionList(ArgLead, CmdLine, CursorPos)
         " TODO: command completion for options
     else
         let result = []
-        let arg_match = "^" . a:ArgLead . ".*"
+        let arg_match = join(["^", a:ArgLead, ".*"], "")
 
         for path in split(globpath(s:projects_folder, "*"), "\n")
             if isdirectory(path)
@@ -806,7 +806,7 @@ function! GoToProjectOrMake(bang, command_line)
                     return
                 endif
             endif
-            echo 'Created new project called "' .  project_name . '"'
+            echo join(['Created new project called "',  project_name, '"'], "")
             call mkdir(project_name)
         endif
 
@@ -825,7 +825,7 @@ command! -bang -nargs=1 -complete=customlist,ProjectsCompltionList  Project :cal
 function! SearchFolder(searchTerm)
     let searchTerm = a:searchTerm
     let searchTerm = substitute(searchTerm, '\\', '\\\\', 'g')
-    let searchTerm = '"' . substitute(searchTerm, '"', '\"', 'g') . '" .'
+    let searchTerm = join(['"', substitute(searchTerm, '"', '\"', 'g'), '" .'], "")
     call DoCommandsInTerm('grep -REn', searchTerm, 0, 0)
 endfunction
 command! -nargs=1 Search :call SearchFolder(<q-args>)
@@ -841,26 +841,28 @@ function! GetRFC(num)
                 let num = repeat('0', 4 - len(num)) . l:num
             endif
         endif
-        let rfc_name = 'rfc' . l:num . '.txt'
-        let rfc_path = g:rfc_download_location . '/' . rfc_name
+
+        let rfc_name = join(['rfc', l:num, '.txt'], "")
+        let rfc_path = join([g:rfc_download_location, '/', rfc_name], "")
 
         if filereadable(rfc_path)
-            call SwitchToOtherPaneOrCreate()
-            execute 'edit ' . rfc_path
+            " Do nothing here. Open file after if-else blocks
         elseif executable('curl')
             if !isdirectory(g:rfc_download_location)
                 call mkdir(g:rfc_download_location)
             endif
             echo 'Downloading'
-            call system('curl https://www.ietf.org/rfc/' . rfc_name . " -o '" . rfc_path . "'")
-
-            call SwitchToOtherPaneOrCreate()
-            execute 'edit ' . rfc_path
+            call system(join(['curl https://www.ietf.org/rfc/', rfc_name, " -o '", rfc_path, "'"], ""))
         else
             echoerr 'curl is not installed on this machine'
+            return
         endif
+
+        call SwitchToOtherPaneOrCreate()
+        execute 'edit ' . rfc_path
+
     else
-        echoerr '"' . a:num . '" is not a number'
+        echoerr join(['"', a:num, '" is not a number'], "")
     endif
 endfunction
 command! -nargs=1 RFC :call GetRFC(<q-args>)
