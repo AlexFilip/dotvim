@@ -83,15 +83,18 @@ augroup WrapLines
     autocmd FileType {txt,org,tex} setlocal wrap linebreak nolist
 augroup END
 
+let s:search_path_separator = has('win32') ? ';' : ':'
 function! AddToPath(...)
     for x in a:000
         if $PATH !~ x
-            let $PATH = join([x, ':', $PATH], "")
+            let $PATH = join([x, s:search_path_separator, $PATH], "")
         endif
     endfor
 endfunction
 
-if !has('win32')
+if has('win32')
+    call AddToPath('C:\tools', 'C:\Program Files\Git\bin')
+else
     call AddToPath('/usr/local/sbin', $HOME . '/bin', '/usr/local/bin')
 endif
 
@@ -767,7 +770,7 @@ command! RenameFiles :call RenameFiles()
 "   C/C++ with compile scripts and main
 "   Client projects (compile scripts and a folder inside with the actual code)
 " TODO: Project files in json format to get
-let s:projects_folder="~/projects"
+let s:projects_folder = has('win32') ? 'C:\projects' : '~/projects'
 function! ProjectsCompltionList(ArgLead, CmdLine, CursorPos)
     if a:ArgLead =~ '^-.\+' || a:ArgLead =~ '^++.\+'
         " TODO: command completion for options
@@ -777,7 +780,7 @@ function! ProjectsCompltionList(ArgLead, CmdLine, CursorPos)
 
         for path in split(globpath(s:projects_folder, "*"), "\n")
             if isdirectory(path)
-                let folder_name = split(path, "/")[-1]
+                let folder_name = split(path, s:path_separator)[-1]
                 if folder_name =~ arg_match
                     call add(result, folder_name)
                 endif
