@@ -697,7 +697,7 @@ function! SearchAndRun(script_name)
                 let script = 'C:\tools\shell-init.bat && ' . script
             endif
 
-            call DoCommandsInTerm('++shell', script, directory_components, "Compiled Successfully")
+            call DoCommandsInTerm('++shell', script, directory_path, "Compiled Successfully")
             return
         endif
         let working_dir = working_dir[:-2] " remove last path element
