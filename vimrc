@@ -46,22 +46,24 @@ set noswapfile
 
 let s:dot_vim_path = fnamemodify(expand("$MYVIMRC"), ":p:h")
 
-call plug#begin(s:dot_vim_path . '/plugins')
+if filereadable(s:dot_vim_path . '/autoload/plug.vim')
+    call plug#begin(s:dot_vim_path . '/plugins')
 
-" Languages
-Plug 'keith/swift.vim'
-Plug 'rust-lang/rust.vim'
+    " Languages
+    Plug 'keith/swift.vim'
+    Plug 'rust-lang/rust.vim'
 
-" Utilities
-Plug 'junegunn/vim-easy-align'
-Plug 'tpope/vim-surround'
-Plug 'tpope/vim-repeat'
-Plug 'tpope/vim-speeddating'
+    " Utilities
+    Plug 'junegunn/vim-easy-align'
+    Plug 'tpope/vim-surround'
+    Plug 'tpope/vim-repeat'
+    Plug 'tpope/vim-speeddating'
 
-" Git support
-Plug 'tpope/vim-fugitive'
+    " Git support
+    Plug 'tpope/vim-fugitive'
 
-call plug#end()
+    call plug#end()
+endif
 
 filetype plugin on
 colorscheme custom
@@ -89,7 +91,9 @@ function! AddToPath(...)
     endfor
 endfunction
 
-call AddToPath('/usr/local/sbin', $HOME . '/bin', '/usr/local/bin')
+if !has('win32')
+    call AddToPath('/usr/local/sbin', $HOME . '/bin', '/usr/local/bin')
+endif
 
 nnoremap Y y$
 
@@ -98,28 +102,27 @@ nnoremap <silent> gce :tabnew<CR>
 nnoremap <silent> ge  :vnew \| wincmd H<CR>
 
 function! MoveTab(multiplier, count)
-    let l:amount  = a:count ? a:count : 1
-    let l:cur_tab = tabpagenr()
-    let l:n_tabs  = tabpagenr("$")
+    let amount  = a:count ? a:count : 1
+    let cur_tab = tabpagenr()
+    let n_tabs  = tabpagenr("$")
+    let new_place = cur_tab + a:multiplier * amount
 
-    let l:new_place = l:cur_tab + a:multiplier * l:amount
-
-    if l:new_place <= 0
-        let l:amount = l:cur_tab - 1
-    elseif l:new_place > l:n_tabs
-        let l:amount = l:n_tabs - l:cur_tab
+    if new_place <= 0
+        let amount = cur_tab - 1
+    elseif new_place > n_tabs
+        let amount = n_tabs - cur_tab
     endif
 
-    if l:amount != 0
-        let cmd = ['tabmove ', '', a:multiplier * l:amount]
+    if amount != 0
+        let cmd = ['tabmove ', '', a:multiplier * amount]
 
         if a:multiplier > 0
             let cmd[1] = '+'
         endif
 
         let cmd = join(cmd, "")
-        " echo "Moving Tabs " . l:cmd
-        execute l:cmd
+        " echo "Moving Tabs " . cmd
+        execute cmd
     endif
 endfunction
 
@@ -181,7 +184,7 @@ function! RebalanceCurrentBlock()
     normal! =%
 
     let open_pos[2] += indent(".") - indent_before
-    call setpos(".", l:open_pos)
+    call setpos(".", open_pos)
 endfunction
 
 " Autocomplete blocks
@@ -405,9 +408,9 @@ endfunction
 " Maybe put the tabs in the status bar or vice-versa (probably better in the
 " tab bar so that information is not duplicated
 function! StatusLine() abort
-    let winnum = winnr() " tabpagebuflist(l:n)[tabpagewinnr(l:n) - 1]
-    let bufnum = winbufnr(l:winnum)
-    let name   =  bufname(l:bufnum)
+    let winnum = winnr() " tabpagebuflist(n)[tabpagewinnr(n) - 1]
+    let bufnum = winbufnr(winnum)
+    let name   =  bufname(bufnum)
 
     let result  = ""
 
@@ -415,18 +418,18 @@ function! StatusLine() abort
         let result .= " " . GetCurrentMode()
     endif
 
-    " let result .= " " . l:winnum 
-    let result .= " > " . l:name
-    let filetype = getbufvar(l:bufnum, "&filetype")
-    if len(l:filetype) != 0
+    " let result .= " " . winnum 
+    let result .= " > " . name
+    let filetype = getbufvar(bufnum, "&filetype")
+    if len(filetype) != 0
         let result .= " " . l:filetype
     endif
 
-    let modifiable = getbufvar(l:bufnum, "&modifiable")
-    let modified   = getbufvar(l:bufnum, "&modified")
-    let result .= !l:modifiable ? " -" : l:modified ? " +" : ""
+    let modifiable = getbufvar(bufnum, "&modifiable")
+    let modified   = getbufvar(bufnum, "&modified")
+    let result .= !modifiable ? " -" : modified ? " +" : ""
 
-    return l:result . " "
+    return result . " "
 endfunction
 
 set statusline=%!StatusLine()
@@ -577,22 +580,22 @@ function! IsTermAlive()
 endfunction
 
 function! SwitchToOtherPaneOrCreate()
-    let l:start_win = winnr()
-    let l:layout = winlayout()
-    if l:layout[0] == 'leaf'
+    let start_win = winnr()
+    let layout = winlayout()
+    if layout[0] == 'leaf'
         " Create new vertical pane and go to left one
         wincmd v
         wincmd l
-    elseif l:layout[0] == 'row'
+    elseif layout[0] == 'row'
         " Buffers layed out side by side
         wincmd l
-        if winnr() == l:start_win
+        if winnr() == start_win
             wincmd h
         endif
-    elseif l:layout[0] == 'col'
+    elseif layout[0] == 'col'
         " Buffers layed out one on top of the other
         wincmd j
-        if winnr() == l:start_win
+        if winnr() == start_win
             wincmd k
         endif
     endif
@@ -601,11 +604,20 @@ endfunction
 function! GotoLineFromTerm()
     if IsTerm()
         let line_contents = getline(".")
-        let regex = '^[A-Za-z0-9/\-\.]\+:[0-9]\+:'
-        " [0-9]\+:
+        let regex = has('win32') ? '[A-Za-z0-9\.:\\]\+([0-9]\+)' : '^[A-Za-z0-9/\-\.]\+:[0-9]\+:'
 
         if match(line_contents, regex) != -1
-            let [filepath, line_num, col_num] = split(line_contents, ":")[:2]
+            if has('win32')
+                let  open_paren = match(line_contents, '(', 0)
+                let close_paren = match(line_contents, ')', open_paren)
+
+                let filepath = line_contents[:open_paren-1]
+                let line_num = line_contents[open_paren+1:close_paren-1]
+                let col_num = 0
+
+            else
+                let [filepath, line_num, col_num] = split(line_contents, ":")[:2]
+            endif
 
             let line_num = str2nr(line_num)
             if col_num =~ '^[0-9]\+'
@@ -617,6 +629,11 @@ function! GotoLineFromTerm()
             call SwitchToOtherPaneOrCreate()
             " NOTE: We might want to save the current file before switching
             execute "edit " . filepath
+
+            if col_num == 0
+                let col_num = indent(line_num) + 1
+            endif
+
             call setpos(".", [0, line_num, col_num, 0])
             normal! zz
         else
@@ -655,7 +672,6 @@ function! DoCommandsInTerm(shell, commands, parent_dir, message)
         call term_sendkeys(bufnr(), all_commands)
     else
         let cmd = join(["terminal++noclose ++curwin", a:shell, all_commands], " ")
-        echo cmd
         execute cmd
     endif
 endfunction
@@ -663,7 +679,8 @@ endfunction
 function! SearchAndRun(script_name)
     " NOTE: I'm separating this out because it seems like it would be handy
     " for running tests as well
-    let working_dir = [""]
+
+    let working_dir = has('win32') ? [] : [""]
     call extend(working_dir, split(getcwd(), s:path_separator))
 
     while len(working_dir) > 0
@@ -671,7 +688,13 @@ function! SearchAndRun(script_name)
         if executable(join([directory_path, s:path_separator, a:script_name], ""))
             " One problem with this is that I can't scroll through the
             " history to see all the errors from the beginning
-            call DoCommandsInTerm('++shell', a:script_name, directory_path, "Compiled Successfully")
+            let script = a:script_name
+
+            if has('win32')
+                let script = 'C:\tools\shell-init.bat && ' . script
+            endif
+
+            call DoCommandsInTerm('++shell', script, directory_components, "Compiled Successfully")
             return
         endif
         let working_dir = working_dir[:-2] " remove last path element
@@ -688,39 +711,42 @@ nnoremap <silent> <leader>c :call SearchAndCompile()<CR>
 
 " = Man =================================
 
-function! ManEntry(name)
-    " if !IsTerm()
-    "     call SwitchToOtherPaneOrCreate()
-    " endif
+if has('win32')
+    function! ManEntry(name)
+        " if !IsTerm()
+        "     call SwitchToOtherPaneOrCreate()
+        " endif
 
-    " if IsTermAlive()
-    "     wincmd v
-    "     wincmd l
-    " endif
+        " if IsTermAlive()
+        "     wincmd v
+        "     wincmd l
+        " endif
 
-    " ++curwin
-    execute "vertical term ++close man " . a:name
-endfunction
-command! -nargs=1 Man :call ManEntry(<q-args>)
+        " ++curwin
+        execute "vertical term ++close man " . a:name
+    endfunction
+    command! -nargs=1 Man :call ManEntry(<q-args>)
+endif
 
 " =======================================
 
 function! RenameFiles()
+    " NOTE: Does not work on Windows, yet.
     " Empty lines are allowed
-    let l:lines = filter(getline(1, '$'), {idx, val -> len(val) > 0})
-    let l:file_list = split(system("ls"), '\n')
+    let lines = filter(getline(1, '$'), {idx, val -> len(val) > 0})
+    let file_list = split(system("ls"), '\n')
 
-    if len(l:lines) != len(l:file_list)
-        echoerr join(["Number of lines in buffer (", len(l:lines),
+    if len(lines) != len(file_list)
+        echoerr join(["Number of lines in buffer (", len(lines),
                     \ ") does not match number of files in current directory (", 
-                    \ len(l:file_list), ")"], "")
+                    \ len(file_list), ")"], "")
         return
     endif
 
-    let commands = repeat([''], len(l:file_list))
-    for index in range(len(l:file_list))
+    let commands = repeat([''], len(file_list))
+    for index in range(len(file_list))
         " TODO: replace characters that need escaping with \char
-        let commands[index] = join(["mv \"", l:file_list[index], "\" \"", l:lines[index], "\""], "")
+        let commands[index] = join(["mv \"", file_list[index], "\" \"", lines[index], "\""], "")
     endfor
 
     normal ggdG
@@ -787,8 +813,8 @@ function! GoToProjectOrMake(bang, command_line)
         endif
 
         let option_end = match(a:command_line, '[ \t]\|$', path_start)
-        let l:option = a:command_line[path_start:option_end-1]
-        call add(options, l:option)
+        let option = a:command_line[path_start:option_end-1]
+        call add(options, option)
 
         let path_start = match(a:command_line, '[^ \t]\|$', option_end)
     endwhile
@@ -832,6 +858,7 @@ command! -nargs=1 Search :call SearchFolder(<q-args>)
 
 " = RFC =======================================
 function! GetRFC(num)
+    " NOTE: Does not work on windows unless curl is installed
     if a:num =~ '^[0-9]\+$'
         let num = a:num
         if len(num) < 4
