@@ -191,7 +191,7 @@ function! RebalanceCurrentBlock()
 endfunction
 
 " Autocomplete blocks
-inoremap          {<CR> {<CR>}<Esc>=kox<BS>
+inoremap          {<CR> {<CR>}<Esc>=ko
 inoremap <silent> } }<Esc>%:call RebalanceCurrentBlock()<CR>%a
 
 " Useless Keys
@@ -453,8 +453,8 @@ endfunction
 
 " On some systems the time returned by reltime() is a few seconds off
 let s:time_difference_seconds = str2nr(strftime('%S')) - (float2nr(reltimefloat(reltime())) % 60)
-let s:timeUntilNextMinute = 60 - ((float2nr(reltimefloat(reltime())) + s:time_difference_seconds) % 60)
-call timer_start(s:timeUntilNextMinute * 1000, 'RedrawTabLineFirst')
+let s:seconds_until_next_minute = 60 - ((float2nr(reltimefloat(reltime())) + s:time_difference_seconds) % 60)
+call timer_start(s:seconds_until_next_minute * 1000, 'RedrawTabLineFirst')
 
 " ============================================
 " Color Additions
@@ -900,6 +900,12 @@ command! -nargs=1 RFC :call GetRFC(<q-args>)
 " Can change this in the machine specific vimrc
 let g:rfc_download_location = $HOME . '/RFC-downloads'
 
+" Abbreviations in insert mode (should these be commands?
+iabbrev <silent> :Now:   <Esc>:let @x = strftime("%X")<CR>"xpa
+iabbrev <silent> :Today: <Esc>:let @x = strftime("%d %b %Y")<CR>"xpa
+iabbrev <silent> :Random:  <Esc>:let @x = rand()<CR>"xpa
+
+
 " =============================================
 
 let s:visual_modes = { 'v':1, 'V':1, '\<C-V>':1 }
@@ -918,15 +924,25 @@ endfunction
 " 
 "     echo "Visual = " . a:visual . " | [" . start_line . ", " . start_column . "]" . " -> [" .   end_line . ", " .   end_column . "]"
 " 
-"     if a:visual == 'V'
-"     elseif a:visual == "\<C-V>"
-"     elseif a:visual == 'v'
+"     " NOTE: 'line' and 'char' are from normal mode
+"     if a:visual == 'V' || a:visual == 'line'
+"     elseif a:visual == "\<C-V>" || a:visual == 'block'
+"     elseif a:visual == 'v' || a:visual == 'char'
 "     else " if a:visual == 'char'
 "         " Normal mode
 "     endif
 " endfunction
 
+" From vim wiki to identify the syntax group under the cursor
+" nnoremap <F10> :echo "hi<" . synIDattr(synID(           line("."), col("."), 1) , "name") . '> trans<'
+"                          \ . synIDattr(synID(           line("."), col("."), 0) , "name") . "> lo<"
+"                          \ . synIDattr(synIDtrans(synID(line("."), col("."), 1)), "name") . ">"<CR>
+
 " For machine specific additions changes
 if filereadable($HOME . '/.local/vimrc')
     source ~/.local/vimrc
+endif
+
+if has('gui')
+    source ~/vimfiles/gvimrc
 endif
