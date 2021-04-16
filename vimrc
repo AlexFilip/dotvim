@@ -210,6 +210,8 @@ cnoremap <C-a> <C-b>
 " cnoremap <C-e> <C-e> " already exists
 cnoremap <C-d> <Del>
 
+cnoremap <C-W> \<\><Left><Left>
+
 " Move selected lines up and down
 vnoremap <C-J> :m '>+1<CR>gv=gv
 vnoremap <C-K> :m '<-2<CR>gv=gv
@@ -939,10 +941,12 @@ endfunction
 "                          \ . synIDattr(synIDtrans(synID(line("."), col("."), 1)), "name") . ">"<CR>
 
 " For machine specific additions changes
-if filereadable($HOME . '/.local/vimrc')
-    source ~/.local/vimrc
+let s:local_vimrc_path = join([$HOME, '.local', 'vimrc'], s:path_separator)
+if filereadable(s:local_vimrc_path)
+    execute "source " . s:local_vimrc_path
 endif
 
-if has('gui')
-    source ~/vimfiles/gvimrc
+let s:gvim_path = join([s:dot_vim_path, 'gvimrc'], s:path_separator)
+if has('gui') && filereadable(s:gvim_path)
+    execute "source " . s:gvim_path
 endif
