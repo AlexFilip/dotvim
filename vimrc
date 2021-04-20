@@ -515,7 +515,7 @@ hi CustomPurple      guifg=#950087 guibg=NONE ctermfg=90  ctermbg=NONE gui=none 
 
 " ============================================
 " Common variables that may be needed by other functions
-let s:path_separator = has('win32') ? '\' : '/'
+let g:path_separator = has('win32') ? '\' : '/'
 
 " TODO: Make the headers project specific
 function! CreateSourceHeader()
@@ -686,20 +686,22 @@ function! SearchAndRun(script_name)
     " for running tests as well
 
     let working_dir = has('win32') ? [] : [""]
-    call extend(working_dir, split(getcwd(), s:path_separator))
+    call extend(working_dir, split(getcwd(), g:path_separator))
 
     while len(working_dir) > 0
-        let directory_path = join(working_dir, s:path_separator)
-        if executable(join([directory_path, s:path_separator, a:script_name], ""))
+        let directory_path = join(working_dir, g:path_separator)
+        if executable(join([directory_path, g:path_separator, a:script_name], ""))
             " One problem with this is that I can't scroll through the
             " history to see all the errors from the beginning
             let script = a:script_name
 
+            let completed_message = "Compiled Successfully"
             if has('win32')
                 let script = 'C:\tools\shell-init.bat && ' . script
+                let completed_message = 0
             endif
 
-            call DoCommandsInTerm('++shell', script, directory_path, "Compiled Successfully")
+            call DoCommandsInTerm('++shell', script, directory_path, completed_message)
             return
         endif
         let working_dir = working_dir[:-2] " remove last path element
@@ -782,7 +784,7 @@ function! ProjectsCompltionList(ArgLead, CmdLine, CursorPos)
 
         for path in split(globpath(s:projects_folder, "*"), "\n")
             if isdirectory(path)
-                let folder_name = split(path, s:path_separator)[-1]
+                let folder_name = split(path, g:path_separator)[-1]
                 if folder_name =~ arg_match
                     call add(result, folder_name)
                 endif
@@ -941,12 +943,12 @@ endfunction
 "                          \ . synIDattr(synIDtrans(synID(line("."), col("."), 1)), "name") . ">"<CR>
 
 " For machine specific additions changes
-let s:local_vimrc_path = join([$HOME, '.local', 'vimrc'], s:path_separator)
+let s:local_vimrc_path = join([$HOME, '.local', 'vimrc'], g:path_separator)
 if filereadable(s:local_vimrc_path)
     execute "source " . s:local_vimrc_path
 endif
 
-let s:gvim_path = join([s:dot_vim_path, 'gvimrc'], s:path_separator)
+let s:gvim_path = join([s:dot_vim_path, 'gvimrc'], g:path_separator)
 if has('gui') && filereadable(s:gvim_path)
     execute "source " . s:gvim_path
 endif
