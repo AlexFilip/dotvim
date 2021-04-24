@@ -101,6 +101,7 @@ endif
 nnoremap Y y$
 
 " Tab shortcuts
+nnoremap <silent> ghe :vnew<CR>
 nnoremap <silent> gce :tabnew<CR>
 nnoremap <silent> ge  :vnew \| wincmd H<CR>
 
