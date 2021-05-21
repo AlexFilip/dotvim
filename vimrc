@@ -35,7 +35,7 @@ endif
 
 " Indenting
 set tabstop=4 shiftwidth=0 softtabstop=-1 expandtab
-set cindent cinoptions=l1,=0,:4,(0,{0
+set cindent cinoptions=l1,=0,:4,(0,{0,+2,w1,W4,t0
 
 set shortmess=filnxtToOIs
 
@@ -64,6 +64,12 @@ if filereadable(s:dot_vim_path . '/autoload/plug.vim')
 
     call plug#end()
 endif
+
+" Start interactive EasyAlign in visual mode (e.g. vipga)
+xmap ga <Plug>(EasyAlign)
+
+" Start interactive EasyAlign for a motion/text object (e.g. gaip)
+nmap ga <Plug>(EasyAlign)
 
 filetype plugin on
 colorscheme custom
@@ -133,10 +139,15 @@ endfunction
 nnoremap <silent> g{ :<C-U>call MoveTab(-1, v:count)<CR>
 nnoremap <silent> g} :<C-U>call MoveTab(+1, v:count)<CR>
 
+" I don't know if I really want this...Like, I don't know if it inspires joy, ya-know, man??
+" nnoremap v <C-V>
+" vnoremap v <C-V>
+
 function! ReenterVisual()
     normal! gv
 endfunction
 
+" This is probably the greatest thing I've ever made in vim.
 function! GotoBeginningOfLine()
     if indent(".") + 1 == col(".")
         normal! 0
@@ -222,8 +233,8 @@ nnoremap <C-J> zl
 nnoremap <C-H> zh
 
 " Commands for convenience
-command! -bang -complete=file W w<bang> <args>
 command! -bang Q q<bang>
+command! -bang -complete=file W w<bang> <args>
 command! -bang -nargs=? -complete=file E e<bang> <args>
 
 " Leader mappings
@@ -241,9 +252,10 @@ let s:comment_leaders = {
     \ 'm' : '//',
     \ 'mm' : '//',
     \ 'vim' : '"',
-    \ 'python' : '#'
+    \ 'python' : '#',
+    \ 'tex' : '%'
 \ }
-    
+
 function! RemoveCommentLeadersNormal(count)
     if has_key(s:comment_leaders, &filetype)
         let leader = substitute(s:comment_leaders[&filetype], '\/', '\\/', 'g')
@@ -268,7 +280,7 @@ endfunction
 function! RemoveCommentLeadersVisual() range
     if has_key(s:comment_leaders, &filetype)
         let leader = substitute(s:comment_leaders[&filetype], '\/', '\\/', 'g')
-        " echo leader
+
         if getline(a:firstline) =~ '^\s*' . leader
             let command = join([(a:firstline + 1), ",", a:lastline, 's/^\s*', leader, '\s*//e'], "")
             execute command
@@ -367,8 +379,9 @@ function! Tabs() abort
     " NOTE: Repeat is used to pre-allocate space, make sure that this is the
     " correct number of characters, otherwise you'll get an error
     let num_prefixes = 3
+    let num_suffixes = 3
     let strings_per_tab = 7
-    let s = repeat(['EMPTY!!!'], num_prefixes + n_tabs * strings_per_tab + 3)
+    let s = repeat(['EMPTY!!!'], num_prefixes + n_tabs * strings_per_tab + num_suffixes)
 
     " TODO: Make this a different colour
     let s[0] = " "
@@ -455,8 +468,9 @@ function! RedrawTabLineFirst(timer)
 endfunction
 
 " On some systems the time returned by reltime() is a few seconds off
-let s:time_difference_seconds = str2nr(strftime('%S')) - (float2nr(reltimefloat(reltime())) % 60)
-let s:seconds_until_next_minute = 60 - ((float2nr(reltimefloat(reltime())) + s:time_difference_seconds) % 60)
+let s:start_reltime = float2nr(reltimefloat(reltime()))
+let s:time_difference_seconds = str2nr(strftime('%S')) - (s:start_reltime % 60)
+let s:seconds_until_next_minute = 60 - ((s:start_reltime + s:time_difference_seconds) % 60)
 call timer_start(s:seconds_until_next_minute * 1000, 'RedrawTabLineFirst')
 
 " ============================================
