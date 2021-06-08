@@ -25,6 +25,7 @@ set wildmenu          " Display a menu of all completions for commands when pres
 set wrap linebreak breakindent " Wrap long lines
 set breakindentopt=shift:0,min:20
 set formatoptions+=n 
+set virtualedit=block " Visual block mode is not limited to the character locations
 
 set nofixendofline    " Don't insert an end of line at the end of the file
 set noeol             " Give it a mean look so it understands
@@ -139,7 +140,8 @@ endfunction
 nnoremap <silent> g{ :<C-U>call MoveTab(-1, v:count)<CR>
 nnoremap <silent> g} :<C-U>call MoveTab(+1, v:count)<CR>
 
-" I don't know if I really want this...Like, I don't know if it inspires joy, ya-know, man??
+" I don't know if I really want this...Like, I don't know
+" if it inspires joy, ya-know, man??
 " nnoremap v <C-V>
 " vnoremap v <C-V>
 
@@ -532,33 +534,66 @@ hi CustomPurple      guifg=#950087 guibg=NONE ctermfg=90  ctermbg=NONE gui=none 
 " Common variables that may be needed by other functions
 let g:path_separator = has('win32') ? '\' : '/'
 
+
+let g:header = ['/*',
+            \ '  File: {file_name}',
+            \ '  Date: {date}',
+            \ '  Creator: {creator}',
+            \ '  Notice: (C) Copyright %Y by {copyright_holder}. All rights reserved.',
+            \ '*/',
+            \ ]
+
+let g:header_sub_options = {
+            \     'date_format' : "%d %B %Y",
+            \     'creator'     : 'Alexandru Filip',
+            \     'copyright_holder' : 'Alexandru Filip'
+            \ }
+
 " TODO: Make the headers project specific
 function! CreateSourceHeader()
     let file_name = expand('%:t')
     let file_extension = split(file_name, '\.')[1]
-    let date = strftime("%d %B %Y")
+    let date = strftime(g:header_sub_options['date_format'])
     let year = strftime("%Y")
-    
-    " TODO: Figure out how I'll make this work
-    " \ 'header' : [
-    " \     '/*',
-    " \     '  File: %:t',
-    " \     '  Date: %d %B %Y',
-    " \     '  Creator: Alexandru Filip',
-    " \     '  Notice: (C) Copyright %Y by Alexandru Filip. All rights reserved.',
-    " \     '*/'
-    " \ ]
 
-    " \ '  Notice: (C) Copyright ' . year . ' by Alexandru Filip. All rights reserved.',
+    let l:header = []
+    for str in g:header
 
-    let header = ['/*',
-                \ '  File: ' . file_name,
-                \ '  Date: ' . date,
-                \ '  Creator: Alexandru Filip',
-                \ '*/',
-                \ ]
+        let start_idx = 0
+        while 1
+            let option_idx =  match(str, '{[A-Za-z_]\+}', start_idx)
 
-    call append(0, header)
+            if option_idx == -1
+                break
+            endif
+
+            let end_idx = match(str, '}', option_idx)
+            let length = end_idx - option_idx - 1
+
+            let key = str[option_idx:end_idx]
+
+            if key == '{file_name}'
+                let value = file_name
+            elseif key == '{date}'
+                let value = date
+            elseif has_key(g:header_sub_options, key[1:-2])
+                let value = get(g:header_sub_options, key[1:-2])
+            else
+                let value = 0
+                let start_idx = end_idx + 1
+            endif
+
+            if value isnot 0
+                let str = substitute(str, key, value, 'g')
+                let start_idx = option_idx + len(value)
+            endif
+        endwhile
+
+        let str = strftime(str)
+        call add(l:header, str)
+    endfor
+
+    call append(0, l:header)
 
     if file_extension =~ '^[hH]\(pp\|PP\)\?$'
         let modified_filename = substitute(toupper(file_name), '[^A-Z]', '_', 'g')
@@ -735,16 +770,6 @@ nnoremap <silent> <leader>c :call SearchAndCompile()<CR>
 
 if has('win32')
     function! ManEntry(name)
-        " if !IsTerm()
-        "     call SwitchToOtherPaneOrCreate()
-        " endif
-
-        " if IsTermAlive()
-        "     wincmd v
-        "     wincmd l
-        " endif
-
-        " ++curwin
         execute "vertical term ++close man " . a:name
     endfunction
     command! -nargs=1 Man :call ManEntry(<q-args>)
@@ -790,7 +815,7 @@ command! RenameFiles :call RenameFiles()
 "   Client projects (compile scripts and a folder inside with the actual code)
 " TODO: Project files in json format to get
 let s:projects_folder = has('win32') ? 'C:\projects' : '~/projects'
-function! ProjectsCompltionList(ArgLead, CmdLine, CursorPos)
+function! ProjectsCompletionList(ArgLead, CmdLine, CursorPos)
     if a:ArgLead =~ '^-.\+' || a:ArgLead =~ '^++.\+'
         " TODO: command completion for options
     else
@@ -811,14 +836,8 @@ function! ProjectsCompltionList(ArgLead, CmdLine, CursorPos)
 endfunction
 
 let s:default_project_file = {
-    \ 'header' : [
-    \     '/*',
-    \     '  File: %:t',
-    \     '  Date: %d %B %Y',
-    \     '  Creator: Alexandru Filip',
-    \     '  Notice: (C) Copyright %Y by Alexandru Filip. All rights reserved.',
-    \     '*/'
-    \ ]
+    \ 'header' : g:header,
+    \ 'header_sub_options' : g:header_sub_options
 \ }
 
 function! GoToProjectOrMake(bang, command_line)
@@ -865,7 +884,7 @@ function! GoToProjectOrMake(bang, command_line)
         return
     endif
 endfunction
-command! -bang -nargs=1 -complete=customlist,ProjectsCompltionList  Project :call GoToProjectOrMake(<bang>0, <q-args>)
+command! -bang -nargs=1 -complete=customlist,ProjectsCompletionList  Project :call GoToProjectOrMake(<bang>0, <q-args>)
 
 
 " = Search ====================================
@@ -920,10 +939,9 @@ command! -nargs=1 RFC :call GetRFC(<q-args>)
 let g:rfc_download_location = $HOME . '/RFC-downloads'
 
 " Abbreviations in insert mode (should these be commands?
-iabbrev <silent> :Now:   <Esc>:let @x = strftime("%X")<CR>"xpa
-iabbrev <silent> :Today: <Esc>:let @x = strftime("%d %b %Y")<CR>"xpa
+iabbrev <silent> :Now:     <Esc>:let @x = strftime("%X")<CR>"xpa
+iabbrev <silent> :Today:   <Esc>:let @x = strftime("%d %b %Y")<CR>"xpa
 iabbrev <silent> :Random:  <Esc>:let @x = rand()<CR>"xpa
-
 
 " =============================================
 
