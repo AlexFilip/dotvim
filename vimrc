@@ -9,6 +9,11 @@ set undolevels=1000           " How many undos
 set undoreload=10000          " number of lines to save for undo
 set undodir=$HOME/.local/vim-undos " where to save undo histories
 
+let s:undo_dir = expand("~/.local/vim-undos/")
+if !isdirectory(s:undo_dir)
+    call mkdir(s:undo_dir)
+endif
+
 " Miscellaneous
 set splitright        " Vertical split goes right, not left
 set showcmd           " Show the current command in operator pending mode
@@ -62,6 +67,10 @@ if filereadable(s:dot_vim_path . '/autoload/plug.vim')
 
     " Git support
     Plug 'tpope/vim-fugitive'
+
+    " Snippets
+    Plug 'SirVer/ultisnips'
+    Plug 'honza/vim-snippets'
 
     call plug#end()
 endif
@@ -544,9 +553,9 @@ let g:header = ['/*',
             \ ]
 
 let g:header_sub_options = {
-            \     'date_format' : "%d %B %Y",
-            \     'creator'     : 'Alexandru Filip',
-            \     'copyright_holder' : 'Alexandru Filip'
+            \    'date_format' : "%d %B %Y",
+            \    'creator'     : 'Alexandru Filip',
+            \    'copyright_holder' : 'Alexandru Filip'
             \ }
 
 " TODO: Make the headers project specific
@@ -945,35 +954,84 @@ iabbrev <silent> :Random:  <Esc>:let @x = rand()<CR>"xpa
 
 " =============================================
 
-let s:visual_modes = { 'v':1, 'V':1, '\<C-V>':1 }
+" From vim wiki to identify the syntax group under the cursor
+" nnoremap <F10> :echo "hi<" . synIDattr(           synID(line("."), col("."), 1) , "name") . '> trans<'
+"                          \ . synIDattr(           synID(line("."), col("."), 0) , "name") . "> lo<"
+"                          \ . synIDattr(synIDtrans(synID(line("."), col("."), 1)), "name") . ">"<CR>
+
+let g:OperatorList = {}
+let g:OperatorChar = 0
+let s:visual_modes = {    'v':'char',    'V':'line', '\<C-V>':'block',
+                     \ 'char':'char', 'line':'line',  'block':'block' }
 function! s:is_a_visual_mode(mode)
     return has_key(s:visual_modes, a:mode)
 endfunction
 
-" NOTE: testing possible custom operators
-" nnoremap [ :set operatorfunc=DoAction<CR>g@
-" vnoremap [ :<C-U>call DoAction(visualmode())<CR>
-" 
-" function! DoAction(visual)
-"     let [start_mark, end_mark] = s:is_a_visual_mode(a:visual) ? ["'<", "'["] : ["'>", "']"]
-"     let [start_line, start_column] = getpos(start_mark)[1:2]
-"     let [  end_line,   end_column] = getpos(  end_mark)[1:2]
-" 
-"     echo "Visual = " . a:visual . " | [" . start_line . ", " . start_column . "]" . " -> [" .   end_line . ", " .   end_column . "]"
-" 
-"     " NOTE: 'line' and 'char' are from normal mode
-"     if a:visual == 'V' || a:visual == 'line'
-"     elseif a:visual == "\<C-V>" || a:visual == 'block'
-"     elseif a:visual == 'v' || a:visual == 'char'
-"     else " if a:visual == 'char'
-"         " Normal mode
-"     endif
-" endfunction
+function! s:do_nothing(...)
+endfunction
 
-" From vim wiki to identify the syntax group under the cursor
-" nnoremap <F10> :echo "hi<" . synIDattr(synID(           line("."), col("."), 1) , "name") . '> trans<'
-"                          \ . synIDattr(synID(           line("."), col("."), 0) , "name") . "> lo<"
-"                          \ . synIDattr(synIDtrans(synID(line("."), col("."), 1)), "name") . ">"<CR>
+" This can't be a script-only (s:) function because it needs to be called from
+" the command-line.
+function! PerformOperator(visual)
+    if g:OperatorChar isnot 0
+        call get(g:OperatorList, g:OperatorChar, funcref('s:do_nothing'))(a:visual)
+        let g:OperatorChar = 0
+    endif
+endfunction
+
+function! MakeOperator(char, func)
+    
+    function! OperatorHandler(visual) closure
+        let mode = get(s:visual_modes, a:visual, 0)
+
+        if a:visual != 'char' && mode isnot 0
+            let [start_mark, end_mark] = ["'<", "'>"]
+        else
+            let [start_mark, end_mark] = ["'[", "']"]
+            let mode = 'normal'
+        endif
+
+        let [start_line, start_column] = getpos(start_mark)[1:2]
+        let [  end_line,   end_column] = getpos(  end_mark)[1:2]
+        " echoerr start_line . " " . end_line
+        let start = { 'start_line':start_line, 'start_column':start_column }
+        let   end = {   'end_line':  end_line,   'end_column':  end_column }
+        call a:func(mode, start, end)
+    endfunction
+
+    let char = a:char[0]
+    let g:OperatorList[char] = funcref('OperatorHandler')
+    let escaped_char = substitute(char, '\', '\\\\', 'g')
+
+    let oper_func_get  = "OperatorList['" . escaped_char . "']"
+    let normal_command = "nnoremap <silent> " . char .  " :let g:OperatorChar = '" . char . "'<CR>:set operatorfunc=PerformOperator<CR>g@"
+    let visual_command = "vnoremap <silent> " . char .  " :<C-U>call " . oper_func_get . "(visualmode())<CR>"
+
+    silent execute normal_command
+    silent execute visual_command
+endfunction
+
+" NOTE: Backslash doesn't work because of the eval system
+function! Backslash(mode, start, end)
+    echo "Backslash"
+endfunction
+call MakeOperator('\', funcref('Backslash'))
+" nnoremap \\
+" nnoremap \/
+
+function! OpenBracket(mode, start, end)
+    echo "Open bracket"
+endfunction
+call MakeOperator('[', funcref('OpenBracket'))
+" nnoremap [[
+" nnoremap []
+
+function! CloseBracket(mode, start, end)
+    echo "Close bracket"
+endfunction
+call MakeOperator(']', funcref('CloseBracket'))
+" nnoremap ]]
+" nnoremap ][
 
 " For machine specific additions changes
 let s:local_vimrc_path = join([$HOME, '.local', 'vimrc'], g:path_separator)
