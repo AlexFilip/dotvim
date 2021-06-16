@@ -60,26 +60,14 @@ if filereadable(s:dot_vim_path . '/autoload/plug.vim')
     Plug 'rust-lang/rust.vim'
 
     " Utilities
-    Plug 'junegunn/vim-easy-align'
     Plug 'tpope/vim-surround'
     Plug 'tpope/vim-repeat'
-    Plug 'tpope/vim-speeddating'
 
     " Git support
     Plug 'tpope/vim-fugitive'
 
-    " Snippets
-    Plug 'SirVer/ultisnips'
-    Plug 'honza/vim-snippets'
-
     call plug#end()
 endif
-
-" Start interactive EasyAlign in visual mode (e.g. vipga)
-xmap ga <Plug>(EasyAlign)
-
-" Start interactive EasyAlign for a motion/text object (e.g. gaip)
-nmap ga <Plug>(EasyAlign)
 
 filetype plugin on
 colorscheme custom
