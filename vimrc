@@ -42,7 +42,6 @@ endif
 " Indenting
 set tabstop=4 shiftwidth=0 softtabstop=-1 expandtab
 set cindent cinoptions=l1,=0,:4,(0,{0,+2,w1,W4,t0
-
 set shortmess=filnxtToOIs
 
 set viminfo+=n$VIMRUNTIME/info " Out of sight, out of mind
@@ -50,14 +49,42 @@ set viminfo+=n$VIMRUNTIME/info " Out of sight, out of mind
 set display=lastline " For writing prose
 set noswapfile
 
+let s:search_path_separator = has('win32') ? ';' : ':'
+function! AddToPath(...)
+    
+    " NOTE: Apparently regexp matching doesn't do its job here so I had to
+    " take matters into my own hands.
+    let paths = {} " As far as I know, vim doesn't have sets
+    for path in split($PATH, s:search_path_separator)
+        if path !=# '' && !has_key(paths, path)
+            let paths[path] = ''
+        endif
+    endfor
+
+    " Previously the filter used 'val !~# $PATH' but that didn't work
+    " for some reason
+    let new_components = filter(copy(a:000),
+                              \ { idx, val ->
+                              \     (val !=# '' && !has_key(paths, val))
+                              \ })
+    call extend(new_components, [$PATH])
+    let $PATH = join(new_components, s:search_path_separator)
+endfunction
+
+if has('win32')
+    call AddToPath('C:\tools', 'C:\Program Files\Git\bin', '')
+else
+    call AddToPath('/usr/local/sbin', $HOME . '/bin', '/usr/local/bin')
+endif
+
 let s:dot_vim_path = fnamemodify(expand("$MYVIMRC"), ":p:h")
 
 if filereadable(s:dot_vim_path . '/autoload/plug.vim')
     call plug#begin(s:dot_vim_path . '/plugins')
 
     " Languages
-    Plug 'keith/swift.vim'
-    Plug 'rust-lang/rust.vim'
+    " Plug 'keith/swift.vim'
+    " Plug 'rust-lang/rust.vim'
 
     " Utilities
     Plug 'tpope/vim-surround'
@@ -86,21 +113,6 @@ augroup WrapLines
     autocmd!
     autocmd FileType {txt,org,tex} setlocal wrap linebreak nolist
 augroup END
-
-let s:search_path_separator = has('win32') ? ';' : ':'
-function! AddToPath(...)
-    for x in a:000
-        if $PATH !~ x
-            let $PATH = join([x, s:search_path_separator, $PATH], "")
-        endif
-    endfor
-endfunction
-
-if has('win32')
-    call AddToPath('C:\tools', 'C:\Program Files\Git\bin')
-else
-    call AddToPath('/usr/local/sbin', $HOME . '/bin', '/usr/local/bin')
-endif
 
 nnoremap Y y$
 
@@ -960,16 +972,28 @@ endfunction
 
 " This can't be a script-only (s:) function because it needs to be called from
 " the command-line.
+
+function! OperGetLine(col)
+    let position = getpos(".")
+    let result = { 'line':position[2], 'column':0 }
+
+    if a:col != 0
+        let result['column'] = len(getline("."))
+    endif
+
+    return result
+endfunction
+
 function! PerformOperator(visual)
     if g:OperatorChar isnot 0
-        call get(g:OperatorList, g:OperatorChar, funcref('s:do_nothing'))(a:visual)
+        call get(g:OperatorList, g:OperatorChar, funcref('s:do_nothing'))['handler'](a:visual)
         let g:OperatorChar = 0
     endif
 endfunction
 
 function! MakeOperator(char, func)
-    
-    function! OperatorHandler(visual) closure
+    let func_holder = { 'func' : a:func }
+    function! func_holder.handler(visual) dict
         let mode = get(s:visual_modes, a:visual, 0)
 
         if a:visual != 'char' && mode isnot 0
@@ -982,44 +1006,74 @@ function! MakeOperator(char, func)
         let [start_line, start_column] = getpos(start_mark)[1:2]
         let [  end_line,   end_column] = getpos(  end_mark)[1:2]
         " echoerr start_line . " " . end_line
-        let start = { 'start_line':start_line, 'start_column':start_column }
-        let   end = {   'end_line':  end_line,   'end_column':  end_column }
-        call a:func(mode, start, end)
+        let start = { 'line':start_line, 'column':start_column }
+        let   end = { 'line':  end_line, 'column':  end_column }
+        call self['func'](mode, start, end)
     endfunction
 
     let char = a:char[0]
-    let g:OperatorList[char] = funcref('OperatorHandler')
-    let escaped_char = substitute(char, '\', '\\\\', 'g')
+    let g:OperatorList[char] = func_holder
+    " let escaped_char = substitute(char, '\', '\\\\', 'g')
 
-    let oper_func_get  = "OperatorList['" . escaped_char . "']"
     let normal_command = "nnoremap <silent> " . char .  " :let g:OperatorChar = '" . char . "'<CR>:set operatorfunc=PerformOperator<CR>g@"
+    let oper_func_get  = "OperatorList['" . char . "']['handler']"
     let visual_command = "vnoremap <silent> " . char .  " :<C-U>call " . oper_func_get . "(visualmode())<CR>"
 
     silent execute normal_command
     silent execute visual_command
 endfunction
 
-" NOTE: Backslash doesn't work because of the eval system
-function! Backslash(mode, start, end)
-    echo "Backslash"
-endfunction
-call MakeOperator('\', funcref('Backslash'))
-" nnoremap \\
-" nnoremap \/
+" function! Backslash(mode, start, end)
+"     echo "Backslash " a:mode a:start a:end
+" endfunction
 
-function! OpenBracket(mode, start, end)
-    echo "Open bracket"
-endfunction
-call MakeOperator('[', funcref('OpenBracket'))
-" nnoremap [[
-" nnoremap []
+" nnoremap <silent> \\ :call Backslash("normal", OperGetLine(0), OperGetLine(-1))<CR>
+" nnoremap <silent> \/ :call Backslash("normal", OperGetLine(0), OperGetLine(-1))<CR>
+" call MakeOperator('\', funcref('Backslash'))
 
-function! CloseBracket(mode, start, end)
-    echo "Close bracket"
-endfunction
-call MakeOperator(']', funcref('CloseBracket'))
-" nnoremap ]]
-" nnoremap ][
+" function! OpenBracket(mode, start, end)
+"     echo "Open bracket " a:mode a:start a:end
+" endfunction
+
+" NOTE: So far I haven't been able to remap [[ and similar keymaps. I'm not sure
+" why.
+" nnoremap <silent> [[ :call OpenBracket("normal", OperGetLine(0), OperGetLine(-1))<CR>
+" nnoremap <silent> [] :call OpenBracket("normal", OperGetLine(0), OperGetLine(-1))<CR>
+" call MakeOperator('[', funcref('OpenBracket'))
+
+" function! CloseBracket(mode, start, end)
+"     echo "Close bracket" a:mode a:start a:end
+" endfunction
+
+" nnoremap <silent> ]] :call CloseBracket("normal", OperGetLine(0), OperGetLine(-1))<CR>
+" nnoremap <silent> ][ :call CloseBracket("normal", OperGetLine(0), OperGetLine(-1))<CR>
+" call MakeOperator(']', funcref('CloseBracket'))
+
+
+" set indentexpr=CustomIndent()
+" function! CustomIndent()
+"     let line_num = line(".")
+"     let prev_lnum = line_num
+"     let prev_line = ''
+"     let prev_indent = 0
+"     
+"     while 1
+"         let prev_lnum -= 1
+" 
+"         if prev_lnum <= 1
+"             break
+"         endif
+" 
+"         let prev_line = getline(prev_lnum)
+"         if prev_line != ''
+"             break
+"         endif
+"     endwhile
+" 
+"     let prev_indent = indent(prev_lnum)
+" 
+"     return cindent(line_num)
+" endfunction
 
 " For machine specific additions changes
 let s:local_vimrc_path = join([$HOME, '.local', 'vimrc'], g:path_separator)
@@ -1027,6 +1081,7 @@ if filereadable(s:local_vimrc_path)
     execute "source " . s:local_vimrc_path
 endif
 
+" Re-source gvimrc when vimrc is reloaded
 let s:gvim_path = join([s:dot_vim_path, 'gvimrc'], g:path_separator)
 if has('gui') && filereadable(s:gvim_path)
     execute "source " . s:gvim_path
