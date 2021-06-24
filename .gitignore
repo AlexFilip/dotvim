@@ -1,5 +1,5 @@
 .DS_Store
 .netrwhist
-autoload/plug.vim
+autoload/plug.vim.old
 plugins/
 spell
