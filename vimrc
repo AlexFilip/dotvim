@@ -375,7 +375,6 @@ function! GetCurrentMode()
     " endif
 endfunction
 
-
 " Hours (24-hour clock) followed by minutes
 let s:timeformat = has('win32') ? '%H:%M' : '%k:%M'
 
@@ -389,15 +388,27 @@ function! Tabs() abort
 
     " NOTE: Repeat is used to pre-allocate space, make sure that this is the
     " correct number of characters, otherwise you'll get an error
-    let num_prefixes = 3
-    let num_suffixes = 3
+
+    let prefixes = [" ", GetCurrentMode(), " "]
+    " %= is the separator between left and right side of tabline
+    " %T specifies the end of the last tab
+    let suffixes = ["%T%#TabLineFill#%=%#TabLineSel# ", strftime(s:timeformat), " "]
+
+    let num_prefixes = len(prefixes)
+    let num_suffixes = len(suffixes)
+
     let strings_per_tab = 7
     let s = repeat(['EMPTY!!!'], num_prefixes + n_tabs * strings_per_tab + num_suffixes)
 
     " TODO: Make this a different colour
-    let s[0] = " "
-    let s[1] = GetCurrentMode()
-    let s[2] = " "
+    for i in range(num_prefixes)
+        let s[i] = prefixes[i]
+    endfor
+
+    for i in range(num_suffixes)
+        let s[i - num_suffixes] = suffixes[i]
+    endfor
+
     " Previously this was initialized to an empty list and I was using
     " extend() to add elements
     " let s = [] " Not sure if a list is faster than a string but there is no stringbuilder in vimscript
@@ -424,12 +435,6 @@ function! Tabs() abort
 
         let s[num_prefixes + i * strings_per_tab + 6] = " "
     endfor
-
-    " %= is the separator between left and right side of tabline
-    " %T specifies the end of the last tab
-    let s[-3] = "%T%#TabLineFill#%=%#TabLineSel# "
-    let s[-2] = strftime(s:timeformat)
-    let s[-1] = ' '
 
     return join(s, "")
 endfunction
@@ -478,10 +483,7 @@ function! RedrawTabLineFirst(timer)
     call timer_start(1 * 1000 * 60, 'RedrawTabLineRepeated', {'repeat':-1})
 endfunction
 
-" On some systems the time returned by reltime() is a few seconds off
-let s:start_reltime = float2nr(reltimefloat(reltime()))
-let s:time_difference_seconds = str2nr(strftime('%S')) - (s:start_reltime % 60)
-let s:seconds_until_next_minute = 60 - ((s:start_reltime + s:time_difference_seconds) % 60)
+let s:seconds_until_next_minute = 60 - str2nr(strftime('%S'))
 call timer_start(s:seconds_until_next_minute * 1000, 'RedrawTabLineFirst')
 
 " ============================================
@@ -530,10 +532,10 @@ augroup END
 "     [[abc def]] {{abc def}}
 
 " cterm colours are not correct
-hi CustomRed         guifg=#eb4034 guibg=NONE ctermfg=160  ctermbg=NONE gui=none      cterm=none
-hi CustomYellow      guifg=#d7d7af guibg=NONE ctermfg=187  ctermbg=NONE gui=none      cterm=none
-hi CustomGreen       guifg=#55bd53 guibg=NONE ctermfg=112  ctermbg=NONE gui=none      cterm=none
-hi CustomBlue        guifg=#33c0d6 guibg=NONE ctermfg=153  ctermbg=NONE gui=none      cterm=none
+hi CustomRed         guifg=#eb4034 guibg=NONE ctermfg=160 ctermbg=NONE gui=none cterm=none
+hi CustomYellow      guifg=#d7d7af guibg=NONE ctermfg=187 ctermbg=NONE gui=none cterm=none
+hi CustomGreen       guifg=#55bd53 guibg=NONE ctermfg=112 ctermbg=NONE gui=none cterm=none
+hi CustomBlue        guifg=#33c0d6 guibg=NONE ctermfg=153 ctermbg=NONE gui=none cterm=none
 hi CustomOrange      guifg=#e54f00 guibg=NONE ctermfg=166 ctermbg=NONE gui=none cterm=none
 hi CustomDarkBlue    guifg=#5f87ff guibg=NONE ctermfg=69  ctermbg=NONE gui=none cterm=none
 hi CustomHotPink     guifg=#d75faf guibg=NONE ctermfg=169 ctermbg=NONE gui=none cterm=none
@@ -542,7 +544,6 @@ hi CustomPurple      guifg=#950087 guibg=NONE ctermfg=90  ctermbg=NONE gui=none 
 " ============================================
 " Common variables that may be needed by other functions
 let g:path_separator = has('win32') ? '\' : '/'
-
 
 let g:header = ['/*',
             \ '  File: {file_name}',
