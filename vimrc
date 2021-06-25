@@ -304,26 +304,37 @@ endfunction
 vnoremap <silent> J :call RemoveCommentLeadersVisual()<CR>
 nnoremap <silent> J :<C-U>call RemoveCommentLeadersNormal(v:count)<CR>
 
+" NOTE: redrawtabline doesn't exist on all vim compiles so I have to check for
+" it. Use this function instead so that the check isn't done every time
+if exists(":redrawtabline")
+    function! RedrawTabLine()
+        redrawtabline
+    endfunction
+else
+    function! RedrawTabLine()
+    endfunction
+endif
+
 augroup EnterAndLeave
     " Enable and disable cursor line in other buffers
     autocmd!
-    autocmd     WinEnter * set   cursorline | redrawtabline
-    autocmd     WinLeave * set nocursorline | redrawtabline
-    autocmd  InsertEnter * set nocursorline | redrawtabline
-    autocmd  InsertLeave * set   cursorline | redrawtabline
+    autocmd     WinEnter * set   cursorline | call RedrawTabLine()
+    autocmd     WinLeave * set nocursorline | call RedrawTabLine()
+    autocmd  InsertEnter * set nocursorline | call RedrawTabLine()
+    autocmd  InsertLeave * set   cursorline | call RedrawTabLine()
 
-    autocmd CmdlineEnter *                    redrawtabline
-    autocmd CmdlineLeave *                    redrawtabline
+    autocmd CmdlineEnter *                    call RedrawTabLine()
+    autocmd CmdlineLeave *                    call RedrawTabLine()
 
-    " autocmd CmdlineEnter / call OverrideModeName("Search") | redrawtabline
-    " autocmd CmdlineLeave / call OverrideModeName(0) | redrawtabline
+    " autocmd CmdlineEnter / call OverrideModeName("Search") | call RedrawTabLine()
+    " autocmd CmdlineLeave / call OverrideModeName(0) | call RedrawTabLine()
 
-    " autocmd CmdlineEnter ? call OverrideModeName("Reverse Search") | redrawtabline
-    " autocmd CmdlineLeave ? call OverrideModeName(0) | redrawtabline
+    " autocmd CmdlineEnter ? call OverrideModeName("Reverse Search") | call RedrawTabLine()
+    " autocmd CmdlineLeave ? call OverrideModeName(0) | call RedrawTabLine()
 
     " I created these but they don't work as intended yet
-    " autocmd  VisualEnter *                    redrawtabline
-    " autocmd  VisualLeave *                    redrawtabline
+    " autocmd  VisualEnter *                    call RedrawTabLine()
+    " autocmd  VisualLeave *                    call RedrawTabLine()
 augroup END
 
 " =============================================
@@ -474,12 +485,12 @@ call timer_stopall()
 function! RedrawTabLineRepeated(timer)
     " Periodically redraw the tabline so that the current time is correct
     " echo "Redrawing tab line repeated " . strftime('%H:%M:%S')
-    redrawtabline
+    call RedrawTabLine()
 endfunction
 function! RedrawTabLineFirst(timer)
     " The first redraw of the tab line so that it updates on the minute
     " echo "Redrawing tab line first " . strftime('%H:%M:%S')
-    redrawtabline
+    call RedrawTabLine()
     call timer_start(1 * 1000 * 60, 'RedrawTabLineRepeated', {'repeat':-1})
 endfunction
 
