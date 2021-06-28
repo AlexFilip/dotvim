@@ -843,7 +843,7 @@ function! ProjectsCompletionList(ArgLead, CmdLine, CursorPos)
         let result = []
         let arg_match = join(["^", a:ArgLead, ".*"], "")
 
-        for path in split(globpath(s:projects_folder, "*"), "\n")
+        for path in split(globpath(g:projects_folder, "*"), "\n")
             if isdirectory(path)
                 let folder_name = split(path, g:path_separator)[-1]
                 if folder_name =~ arg_match
@@ -884,7 +884,7 @@ function! GoToProjectOrMake(bang, command_line)
     let project_name = a:command_line[path_start:]
 
     if len(project_name) != 0
-        execute 'cd ' . s:projects_folder
+        execute 'cd ' . g:projects_folder
         if !isdirectory(project_name)
             if filereadable(project_name)
                 if a:bang
