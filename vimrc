@@ -835,7 +835,7 @@ command! RenameFiles :call RenameFiles()
 "   C/C++ with compile scripts and main
 "   Client projects (compile scripts and a folder inside with the actual code)
 " TODO: Project files in json format to get
-let s:projects_folder = has('win32') ? 'C:\projects' : '~/projects'
+let g:projects_folder = has('win32') ? 'C:\projects' : '~/projects'
 function! ProjectsCompletionList(ArgLead, CmdLine, CursorPos)
     if a:ArgLead =~ '^-.\+' || a:ArgLead =~ '^++.\+'
         " TODO: command completion for options
