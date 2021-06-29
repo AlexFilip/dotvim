@@ -510,18 +510,18 @@ augroup my_todo
         \ | syn keyword CustomGreen      containedin=[a-zA-Z]*CommentL\? NOTE INCOMPLETE
         \ | syn keyword CustomRed        containedin=[a-zA-Z]*CommentL\? XXX FIX FIXME BUG IMPORTANT
         \ | syn keyword CustomBlue       containedin=[a-zA-Z]*CommentL\? REVIEW SIMPLIFY
-        \ | syn region  CustomRed        containedin=[a-zA-Z]*CommentL\? start='![_a-zA-Z0-9]'  end='\>'
-        \ | syn region  CustomGreen      containedin=[a-zA-Z]*CommentL\? start='@[_a-zA-Z0-9]'  end='\>'
-        \ | syn region  CustomYellow     containedin=[a-zA-Z]*CommentL\? start='#[_a-zA-Z0-9]'  end='\>'
-        \ | syn region  CustomBlue       containedin=[a-zA-Z]*CommentL\? start='\$[_a-zA-Z0-9]' end='\>'
+        " \ | syn region  CustomRed        containedin=[a-zA-Z]*CommentL\? start='![_a-zA-Z0-9]'  end='\>'
+        " \ | syn region  CustomGreen      containedin=[a-zA-Z]*CommentL\? start='@[_a-zA-Z0-9]'  end='\>'
+        " \ | syn region  CustomYellow     containedin=[a-zA-Z]*CommentL\? start='#[_a-zA-Z0-9]'  end='\>'
+        " \ | syn region  CustomBlue       containedin=[a-zA-Z]*CommentL\? start='\$[_a-zA-Z0-9]' end='\>'
         " \ | syn region  CustomOrange     containedin=[a-zA-Z]*CommentL\? start='&[_a-zA-Z0-9]'  end='\>'
         " \ | syn region  CustomHotPink    containedin=[a-zA-Z]*CommentL\? start=':[_a-zA-Z0-9]'  end='\>'
         " \ | syn region  CustomPurple     containedin=[a-zA-Z]*CommentL\? start='/[_a-zA-Z0-9]'  end='\>'
-        \
-        \ | syn region  CustomRed        containedin=[a-zA-Z]*CommentL\? start='!\['  end='\]\|$'
-        \ | syn region  CustomGreen      containedin=[a-zA-Z]*CommentL\? start='@\['  end='\]\|$'
-        \ | syn region  CustomYellow     containedin=[a-zA-Z]*CommentL\? start='#\['  end='\]\|$'
-        \ | syn region  CustomBlue       containedin=[a-zA-Z]*CommentL\? start='\$\[' end='\]\|$'
+        " \
+        " \ | syn region  CustomRed        containedin=[a-zA-Z]*CommentL\? start='!\['  end='\]\|$'
+        " \ | syn region  CustomGreen      containedin=[a-zA-Z]*CommentL\? start='@\['  end='\]\|$'
+        " \ | syn region  CustomYellow     containedin=[a-zA-Z]*CommentL\? start='#\['  end='\]\|$'
+        " \ | syn region  CustomBlue       containedin=[a-zA-Z]*CommentL\? start='\$\[' end='\]\|$'
         \ | syn region  CustomDarkBlue   containedin=[a-zA-Z]*CommentL\? start='%\['  end='\]\|$'
         " \ | syn region  CustomOrange     containedin=[a-zA-Z]*CommentL\? start='&\['  end='\]\|$'
         " \ | syn region  CustomHotPink    containedin=[a-zA-Z]*CommentL\? start=':\['  end='\]\|$'
