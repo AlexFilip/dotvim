@@ -213,9 +213,9 @@ function! RebalanceCurrentBlock()
     call setpos(".", open_pos)
 endfunction
 
-" Autocomplete blocks
-inoremap          {<CR> {<CR>}<Esc>=ko
-inoremap <silent> } }<Esc>%:call RebalanceCurrentBlock()<CR>%a
+" Autocomplete blocks (The <C-O> is so that it doesn't make a new undo)
+inoremap          {<CR> {<CR>}<C-O>=k<C-O>o
+inoremap <silent> } }<C-O>%<C-O>:call RebalanceCurrentBlock()<CR><C-O>%<C-G>U<Right>
 
 " Useless Keys
 nnoremap <CR>    <nop>
@@ -245,6 +245,8 @@ nnoremap <C-H> zh
 
 " Commands for convenience
 command! -bang Q q<bang>
+command! -bang Qa qa<bang>
+command! -bang QA qa<bang>
 command! -bang -complete=file W w<bang> <args>
 command! -bang -nargs=? -complete=file E e<bang> <args>
 
@@ -355,7 +357,7 @@ let &t_EI.="\e[2 q" " Normal mode
 " Directory tree listing options
 let g:netrw_liststyle = 1
 let g:netrw_banner = 0
-let g:netrw_keepdir = 0
+let g:netrw_keepdir = 1
 
 " Docs: http://vimhelp.appspot.com/eval.txt.html
 set fillchars=stlnc:\|,vert:\|,fold:.,diff:.
@@ -510,37 +512,7 @@ augroup my_todo
         \ | syn keyword CustomGreen      containedin=[a-zA-Z]*CommentL\? NOTE INCOMPLETE
         \ | syn keyword CustomRed        containedin=[a-zA-Z]*CommentL\? XXX FIX FIXME BUG IMPORTANT
         \ | syn keyword CustomBlue       containedin=[a-zA-Z]*CommentL\? REVIEW SIMPLIFY
-        " \ | syn region  CustomRed        containedin=[a-zA-Z]*CommentL\? start='![_a-zA-Z0-9]'  end='\>'
-        " \ | syn region  CustomGreen      containedin=[a-zA-Z]*CommentL\? start='@[_a-zA-Z0-9]'  end='\>'
-        " \ | syn region  CustomYellow     containedin=[a-zA-Z]*CommentL\? start='#[_a-zA-Z0-9]'  end='\>'
-        " \ | syn region  CustomBlue       containedin=[a-zA-Z]*CommentL\? start='\$[_a-zA-Z0-9]' end='\>'
-        " \ | syn region  CustomOrange     containedin=[a-zA-Z]*CommentL\? start='&[_a-zA-Z0-9]'  end='\>'
-        " \ | syn region  CustomHotPink    containedin=[a-zA-Z]*CommentL\? start=':[_a-zA-Z0-9]'  end='\>'
-        " \ | syn region  CustomPurple     containedin=[a-zA-Z]*CommentL\? start='/[_a-zA-Z0-9]'  end='\>'
-        " \
-        " \ | syn region  CustomRed        containedin=[a-zA-Z]*CommentL\? start='!\['  end='\]\|$'
-        " \ | syn region  CustomGreen      containedin=[a-zA-Z]*CommentL\? start='@\['  end='\]\|$'
-        " \ | syn region  CustomYellow     containedin=[a-zA-Z]*CommentL\? start='#\['  end='\]\|$'
-        " \ | syn region  CustomBlue       containedin=[a-zA-Z]*CommentL\? start='\$\[' end='\]\|$'
-        \ | syn region  CustomDarkBlue   containedin=[a-zA-Z]*CommentL\? start='%\['  end='\]\|$'
-        " \ | syn region  CustomOrange     containedin=[a-zA-Z]*CommentL\? start='&\['  end='\]\|$'
-        " \ | syn region  CustomHotPink    containedin=[a-zA-Z]*CommentL\? start=':\['  end='\]\|$'
-        " \ | syn region  CustomPurple     containedin=[a-zA-Z]*CommentL\? start='/\['  end='\]\|$'
-
-        " These would be interesting in comments but they also match outside
-        " of comments and that's annoying.
-        " \ | syn region  CustomBold      containedin=[a-zA-Z]*CommentL\? contains=CustomUnderline start='*'  end='*\|$'
-        " \ | syn region  CustomUnderline containedin=[a-zA-Z]*CommentL\? contains=CustomBold      start='\<_' end='_\|$'
-        " \ | syn region  NONE matchgroup=CustomBlockBlue containedin=[a-zA-Z]*CommentL\? contains=Custom.* start='\\[_a-zA-Z0-9]\+{'   end='}'
 augroup END
-
-" Fruit salad for testing
-"     FIX - FIXME - TODO - NOTE - XXX - OPTIMIZE - INCOMPLETE - BUG - HACK - REVIEW - SIMPLIFY
-"     !Exclamation --- @AtSign --- #Hash --- $Dollar --- %Percent
-"     &Ampersand
-"     /Slash --- :Colon
-"     
-"     [[abc def]] {{abc def}}
 
 " cterm colours are not correct
 hi CustomRed         guifg=#eb4034 guibg=NONE ctermfg=160 ctermbg=NONE gui=none cterm=none
