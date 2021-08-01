@@ -235,6 +235,43 @@ cnoremap <C-d> <Del>
 
 cnoremap <C-W> \<\><Left><Left>
 
+" Search selected text
+let s:visual_search_len = 0
+let s:vis_search_rev = 0
+function! VisualSearchNext(reverse)
+    exec 'normal! ' . (xor(s:vis_search_rev, a:reverse) ? 'N' : 'n') . 'v' . (s:visual_search_len > 0 ? s:visual_search_len . 'l' : '')
+endfunction
+
+function! ReselectSearched(reverse)
+    let first_pos = getpos("'<")
+    let last_pos = getpos("'>")
+
+    if first_pos[1] == last_pos[1]
+        let line = getline(first_pos[1])
+        let searched = line[first_pos[2] - 1:last_pos[2] - 1]
+        let s:visual_search_len = len(searched) - 1
+        let s:vis_search_rev = a:reverse
+
+        let match_id = '[A-Za-z0-9_]'
+        if line[first_pos[2] - 1] =~ match_id && (first_pos[2] == 1 || line[first_pos[2] - 2] !~ match_id)
+            let searched = '\<' . searched
+        endif
+
+        if line[last_pos[2] - 1] =~  match_id && (last_pos[2] == len(line) || line[last_pos[2]] !~ match_id)
+            let searched .= '\>'
+        endif
+
+        let @/ = searched
+        call VisualSearchNext(0)
+    else
+        normal! gv
+    endif
+endfunction
+vnoremap <silent> * :<C-U>call ReselectSearched(0)<CR>
+vnoremap <silent> n :<C-U>call VisualSearchNext(0)<CR>
+vnoremap <silent> # :<C-U>call ReselectSearched(1)<CR>
+vnoremap <silent> N :<C-U>call VisualSearchNext(1)<CR>
+
 " Move selected lines up and down
 vnoremap <C-J> :m '>+1<CR>gv=gv
 vnoremap <C-K> :m '<-2<CR>gv=gv
