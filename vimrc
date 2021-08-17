@@ -214,8 +214,8 @@ function! RebalanceCurrentBlock()
 endfunction
 
 " Autocomplete blocks (The <C-O> is so that it doesn't make a new undo)
-inoremap          {<CR> {<CR>}<C-O>=k<C-O>o
-inoremap <silent> } }<C-O>%<C-O>:call RebalanceCurrentBlock()<CR><C-O>%<C-G>U<Right>
+" inoremap          {<CR> {<CR>}<C-O>=k<C-O>o
+" inoremap <silent> } }<C-O>%<C-O>:call RebalanceCurrentBlock()<CR><C-O>%<C-G>U<Right>
 
 " Useless Keys
 nnoremap <CR>    <nop>
@@ -242,6 +242,7 @@ function! VisualSearchNext(reverse)
     exec 'normal! ' . (xor(s:vis_search_rev, a:reverse) ? 'N' : 'n') . 'v' . (s:visual_search_len > 0 ? s:visual_search_len . 'l' : '')
 endfunction
 
+" Search what is selected with *, #, n and N
 function! ReselectSearched(reverse)
     let first_pos = getpos("'<")
     let last_pos = getpos("'>")
@@ -867,7 +868,8 @@ endfunction
 
 let s:default_project_file = {
     \ 'header' : g:header,
-    \ 'header_sub_options' : g:header_sub_options
+    \ 'header_sub_options' : g:header_sub_options,
+    \ 'build_command' : s:compile_script_name
 \ }
 
 function! GoToProjectOrMake(bang, command_line)
