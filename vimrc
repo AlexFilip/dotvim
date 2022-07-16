@@ -1,110 +1,113 @@
+vim9script
 syntax on
 
-" Autoreload file
-set autoread " automatically reload file when changed on disk
+# Autoreload file
+set autoread # automatically reload file when changed on disk
 
-" Persistent Undo
-set undofile                  " Save undos after file closes
-set undolevels=1000           " How many undos
-set undoreload=10000          " number of lines to save for undo
-set undodir=$HOME/.local/vim-undos " where to save undo histories
+# Persistent Undo
+set undofile                  # Save undos after file closes
+set undolevels=1000           # How many undos
+set undoreload=10000          # number of lines to save for undo
+set undodir=$HOME/.local/vim-undos # where to save undo histories
 
-let s:undo_dir = expand("~/.local/vim-undos/")
-if !isdirectory(s:undo_dir)
-    call mkdir(s:undo_dir)
+const undo_dir = expand("~/.local/vim-undos/")
+if !isdirectory(undo_dir)
+    mkdir(undo_dir)
 endif
 
-" Miscellaneous
-set splitright        " Vertical split goes right, not left
-set showcmd           " Show the current command in operator pending mode
-set cursorline        " Make the cursor line a visible color
-set noshowmode        " Don't show -- INSERT --
-set mouse=a           " Allow mouse input
-set sidescroll=1      " Number of columns to scroll left and right
-set backspace=indent  " allow backspacing only over automatic indenting (:help 'backspace')
-set showtabline=2     " 0 = never show tabline, 1 = when more than one tab, 2 = always
-set laststatus=0      " Whether or not to show the status line. Values same as showtabline
-set clipboard=unnamed " Use system clipboard
-set wildmenu          " Display a menu of all completions for commands when pressing tab
+# Miscellaneous
+set splitright        # Vertical split goes right, not left
+set showcmd           # Show the current command in operator pending mode
+set cursorline        # Make the cursor line a visible color
+set noshowmode        # Don't show -- INSERT --
+set mouse=a           # Allow mouse input
+set sidescroll=1      # Number of columns to scroll left and right
+set backspace=indent  # allow backspacing only over automatic indenting (:help 'backspace')
+set showtabline=2     # 0 = never show tabline, 1 = when more than one tab, 2 = always
+set laststatus=0      # Whether or not to show the status line. Values same as showtabline
+set clipboard=unnamed # Use system clipboard
+set wildmenu          # Display a menu of all completions for commands when pressing tab
 
-set wrap linebreak breakindent " Wrap long lines
+set wrap linebreak breakindent # Wrap long lines
 set breakindentopt=shift:0,min:20
 set formatoptions+=n 
-set virtualedit=block " Visual block mode is not limited to the character locations
+set virtualedit=block # Visual block mode is not limited to the character locations
 
-set nofixendofline    " Don't insert an end of line at the end of the file
-set noeol             " Give it a mean look so it understands
+set nofixendofline    # Don't insert an end of line at the end of the file
+set noeol             # Give it a mean look so it understands
+
+# Leader mappings
+g:mapleader = " "
 
 if !has('win32') && executable('/bin/zsh')
-    set shell=/bin/zsh " Shell to launch in terminal
+    set shell=/bin/zsh # Shell to launch in terminal
 endif
 
-" Indenting
+# Indenting
 set tabstop=4 shiftwidth=0 softtabstop=-1 expandtab
 set cindent cinoptions=l1,=0,:4,(0,{0,+2,w1,W4,t0
 set shortmess=filnxtToOIs
 
-set viminfo+=n$VIMRUNTIME/info " Out of sight, out of mind
+set viminfo+=n$VIMRUNTIME/info # Out of sight, out of mind
 
-set display=lastline " For writing prose
+set display=lastline # For writing prose
 set noswapfile
 
-let s:search_path_separator = has('win32') ? ';' : ':'
-function! AddToPath(...)
+const search_path_separator = has('win32') ? ';' : ':'
+def AddToPath(...args: list<string>)
     
-    " NOTE: Apparently regexp matching doesn't do its job here so I had to
-    " take matters into my own hands.
-    let paths = {} " As far as I know, vim doesn't have sets
-    for path in split($PATH, s:search_path_separator)
+    # NOTE: Apparently regexp matching doesn't do its job here so I had to
+    # take matters into my own hands.
+    final paths = {} # As far as I know, vim doesn't have sets
+    for path in split($PATH, search_path_separator)
         if path !=# '' && !has_key(paths, path)
-            let paths[path] = ''
+            paths[path] = ''
         endif
     endfor
 
-    " Previously the filter used 'val !~# $PATH' but that didn't work
-    " for some reason
-    let new_components = filter(copy(a:000),
-                              \ { idx, val ->
-                              \     (val !=# '' && !has_key(paths, val))
-                              \ })
-    call extend(new_components, [$PATH])
-    let $PATH = join(new_components, s:search_path_separator)
-endfunction
+    # Previously the filter used 'val !~# $PATH' but that didn't work
+    # for some reason
+    final new_components = filter(copy(args), (idx: number, val: any): bool => { 
+        return (val !=# '' && !has_key(paths, val))
+    })
+    extend(new_components, [$PATH])
+    $PATH = join(new_components, search_path_separator)
+enddef
 
 if has('win32')
-    call AddToPath('C:\tools', 'C:\Program Files\Git\bin', '')
+    AddToPath('C:\tools', 'C:\Program Files\Git\bin', '')
 else
-    call AddToPath('/usr/local/sbin', $HOME . '/bin', '/usr/local/bin')
+    AddToPath('/usr/local/sbin', $HOME .. '/bin', '/usr/local/bin')
 endif
 
-let s:dot_vim_path = fnamemodify(expand("$MYVIMRC"), ":p:h")
+const dot_vim_path = fnamemodify(expand("$MYVIMRC"), ":p:h")
 
-if filereadable(s:dot_vim_path . '/autoload/plug.vim')
-    call plug#begin(s:dot_vim_path . '/plugins')
+if filereadable(dot_vim_path .. '/autoload/plug.vim')
+    plug#begin(dot_vim_path .. '/plugins')
 
-    " Languages
-    " Plug 'keith/swift.vim'
-    " Plug 'rust-lang/rust.vim'
+    # Languages
+    # Plug 'keith/swift.vim'
+    # Plug 'rust-lang/rust.vim'
 
-    " Utilities
+    # Utilities
     Plug 'tpope/vim-surround'
     Plug 'tpope/vim-repeat'
 
-    " Git support
+    # Git support
     Plug 'tpope/vim-fugitive'
 
-    call plug#end()
+    plug#end()
 endif
 
 filetype plugin on
 colorscheme custom
 
-" Make help window show up on right, not above
+# Make help window show up on right, not above
 augroup MiscFile
     autocmd!
     autocmd FileType help wincmd L
-    " Reload _vimrc on write
-    " Neither of these work
+    # Reload _vimrc on write
+    # Neither of these work
     autocmd BufWritePost $MYVIMRC  source $MYVIMRC
     autocmd BufWritePost $MYGVIMRC source $MYGVIMRC
 augroup END
@@ -116,443 +119,438 @@ augroup END
 
 nnoremap Y y$
 
-" Tab shortcuts
+# Tab shortcuts
 nnoremap <silent> ghe :vnew<CR>
 nnoremap <silent> gce :tabnew<CR>
 nnoremap <silent> ge  :vnew \| wincmd H<CR>
 
-function! MoveTab(multiplier, count)
-    let amount  = a:count ? a:count : 1
-    let cur_tab = tabpagenr()
-    let n_tabs  = tabpagenr("$")
-    let new_place = cur_tab + a:multiplier * amount
+def g:MoveTab(multiplier: number, count: number)
+    var amount    = count ? count : 1
+    const cur_tab   = tabpagenr()
+    const n_tabs    = tabpagenr("$")
+    const new_place = cur_tab + multiplier * amount
 
     if new_place <= 0
-        let amount = cur_tab - 1
+        amount = cur_tab - 1
     elseif new_place > n_tabs
-        let amount = n_tabs - cur_tab
+        amount = n_tabs - cur_tab
     endif
 
     if amount != 0
-        let cmd = ['tabmove ', '', a:multiplier * amount]
+        final cmd = ['tabmove ', '', multiplier * amount]
 
-        if a:multiplier > 0
-            let cmd[1] = '+'
+        if multiplier > 0
+            cmd[1] = '+'
         endif
 
-        let cmd = join(cmd, "")
-        " echo "Moving Tabs " . cmd
-        execute cmd
+        const cmdString = join(cmd, "")
+
+        # echo "Moving Tabs " .. cmd
+        execute cmdString
     endif
-endfunction
+enddef
 
-nnoremap <silent> g{ :<C-U>call MoveTab(-1, v:count)<CR>
-nnoremap <silent> g} :<C-U>call MoveTab(+1, v:count)<CR>
+nnoremap <silent> g{ :<C-U>call g:MoveTab(-1, v:count)<CR>
+nnoremap <silent> g} :<C-U>call g:MoveTab(+1, v:count)<CR>
 
-" I don't know if I really want this...Like, I don't know
-" if it inspires joy, ya-know, man??
-" nnoremap v <C-V>
-" vnoremap v <C-V>
+# I don't know if I really want this...Like, I don't know
+# if it inspires joy, ya-know, man??
+# nnoremap v <C-V>
+# vnoremap v <C-V>
 
-function! ReenterVisual()
+def g:ReenterVisual()
     normal! gv
-endfunction
+enddef
 
-" This is probably the greatest thing I've ever made in vim.
-function! GotoBeginningOfLine()
+# This is probably the greatest thing I've ever made in vim.
+def g:GotoBeginningOfLine()
     if indent(".") + 1 == col(".")
         normal! 0
     else
         normal! ^
     endif
-endfunction
+enddef
 
 nnoremap <silent> 0 :<C-U>call GotoBeginningOfLine()<CR>
 nnoremap <silent> - $
 
-vnoremap <silent> 0 :<C-U>call ReenterVisual() \| call GotoBeginningOfLine()<CR>
+vnoremap <silent> 0 :<C-U>ReenterVisual() \| GotoBeginningOfLine()<CR>
 vnoremap <silent> - $
 
-onoremap <silent> 0 :<C-U>call GotoBeginningOfLine()<CR>
+onoremap <silent> 0 :<C-U>GotoBeginningOfLine()<CR>
 onoremap <silent> - $
 
-" Some terminal shortcuts
+# Some terminal shortcuts
 nnoremap <silent> ght :vertical terminal<CR>
-nnoremap <silent> gct :tabnew \| terminal++curwin<CR>
+nnoremap <silent> gct :tabnew \| terminal ++curwin<CR>
 
 if !has('win32')
-    " Debugger
-    let s:debugger = "lldb"
-    function! LaunchDebugger(vertical, options)
-        if a:vertical
-            let prev_command = "vertical"
-        else
-            let prev_command = "tabnew \|"
-        endif
-        execute join([prev_command, " terminal ", a:options, " ++noclose ", s:debugger], "")
-    endfunction
-    nnoremap <silent> ghd :call LaunchDebugger(1, "")<CR>
-    nnoremap <silent> gcd :call LaunchDebugger(0, "++curwin")<CR>
+    # Debugger
+    const debugger = "lldb"
+    def g:LaunchDebugger(vertical: bool, options: string)
+        const prev_command = vertical ? "vertical" : "tabnew \|"
+        execute join([prev_command, " terminal ", options, " ++noclose ", debugger], "")
+    enddef
+    nnoremap <silent> ghd :LaunchDebugger(1, "")<CR>
+    nnoremap <silent> gcd :LaunchDebugger(0, "++curwin")<CR>
 
-    " Htop
+    # Htop
     nnoremap <silent> ghh :vertical terminal htop<CR>
-    nnoremap <silent> gch :tabnew \| terminal++curwin htop<CR>
+    nnoremap <silent> gch :tabnew \| terminal ++curwin htop<CR>
 endif
 
-" Enter normal mode without getting emacs pinky
+# Enter normal mode without getting emacs pinky
 tnoremap <C-w>[ <C-\><C-n>
 tnoremap <C-w><C-[> <C-\><C-n>
 
-function! RebalanceCurrentBlock()
-    let open_pos = getpos(".")
-    let indent_before = indent(".")
+def g:RebalanceCurrentBlock()
+    final open_pos = getpos(".")
+    const indent_before = indent(".")
 
     normal! =%
 
-    let open_pos[2] += indent(".") - indent_before
-    call setpos(".", open_pos)
-endfunction
+    open_pos[2] += indent(".") - indent_before
+    setpos(".", open_pos)
+enddef
 
-" Autocomplete blocks (The <C-O> is so that it doesn't make a new undo)
-" inoremap          {<CR> {<CR>}<C-O>=k<C-O>o
-" inoremap <silent> } }<C-O>%<C-O>:call RebalanceCurrentBlock()<CR><C-O>%<C-G>U<Right>
+# Autocomplete blocks (The <C-O> is so that it doesn't make a new undo)
+# inoremap          {<CR> {<CR>}<C-O>=k<C-O>o
+# inoremap <silent> } }<C-O>%<C-O>:call g:RebalanceCurrentBlock()<CR><C-O>%<C-G>U<Right>
 
-" Useless Keys
+# Useless Keys
 nnoremap <CR>    <nop>
 nnoremap <BS>    <nop>
 nnoremap <Del>   <nop>
 nnoremap <Space> <nop>
 
-" Who needs Ex-mode these days?
+# Who needs Ex-mode these days?
 nnoremap Q <nop>
 
-" Terminal movement in command line mode
+# Terminal movement in command line mode
 cnoremap <C-f> <Right>
 cnoremap <C-b> <Left>
 cnoremap <C-a> <C-b>
-" cnoremap <C-e> <C-e> " already exists
+# cnoremap <C-e> <C-e> # already exists
 cnoremap <C-d> <Del>
 
 cnoremap <C-W> \<\><Left><Left>
 
-" Search selected text
-let s:visual_search_len = 0
-let s:vis_search_rev = 0
-function! VisualSearchNext(reverse)
-    exec 'normal! ' . (xor(s:vis_search_rev, a:reverse) ? 'N' : 'n') . 'v' . (s:visual_search_len > 0 ? s:visual_search_len . 'l' : '')
-endfunction
+# Search selected text
+var visual_search_len = 0
+var visual_search_reversed = false
 
-" Search what is selected with *, #, n and N
-function! ReselectSearched(reverse)
-    let first_pos = getpos("'<")
-    let last_pos = getpos("'>")
+def g:VisualSearchNext(reverse: bool)
+    exec 'normal! ' .. (xor(visual_search_reversed ? 1 : 0, reverse ? 1 : 0) != 0 ? 'N' : 'n') .. 'v' .. (visual_search_len > 0 ? visual_search_len .. 'l' : '')
+enddef
+
+# Search what is selected with *, #, n and N
+def g:ReselectSearched(reverse: bool)
+    final first_pos = getpos("'<")
+    final last_pos = getpos("'>")
 
     if first_pos[1] == last_pos[1]
-        let line = getline(first_pos[1])
-        let searched = line[first_pos[2] - 1:last_pos[2] - 1]
-        let s:visual_search_len = len(searched) - 1
-        let s:vis_search_rev = a:reverse
+        const line = getline(first_pos[1])
+        var searched = line[first_pos[2] - 1 : last_pos[2] - 1]
+        visual_search_len = len(searched) - 1
+        visual_search_reversed = reverse
 
-        let match_id = '[A-Za-z0-9_]'
+        var match_id = '[A-Za-z0-9_]'
         if line[first_pos[2] - 1] =~ match_id && (first_pos[2] == 1 || line[first_pos[2] - 2] !~ match_id)
-            let searched = '\<' . searched
+            searched = '\<' .. searched
         endif
 
         if line[last_pos[2] - 1] =~  match_id && (last_pos[2] == len(line) || line[last_pos[2]] !~ match_id)
-            let searched .= '\>'
+            searched ..= '\>'
         endif
 
-        let @/ = searched
-        call VisualSearchNext(0)
+        @/ = searched
+        g:VisualSearchNext(false)
     else
         normal! gv
     endif
-endfunction
-vnoremap <silent> * :<C-U>call ReselectSearched(0)<CR>
-vnoremap <silent> n :<C-U>call VisualSearchNext(0)<CR>
-vnoremap <silent> # :<C-U>call ReselectSearched(1)<CR>
-vnoremap <silent> N :<C-U>call VisualSearchNext(1)<CR>
+enddef
 
-" Move selected lines up and down
+vnoremap <silent> * :<C-U>call g:ReselectSearched(v:false)<CR>
+vnoremap <silent> n :<C-U>call g:VisualSearchNext(v:false)<CR>
+vnoremap <silent> # :<C-U>call g:ReselectSearched(v:true)<CR>
+vnoremap <silent> N :<C-U>call g:VisualSearchNext(v:true)<CR>
+
+# Move selected lines up and down
 vnoremap <C-J> :m '>+1<CR>gv=gv
 vnoremap <C-K> :m '<-2<CR>gv=gv
 
-" Horizontal scrolling. Only useful when wrap is turned off.
+# Horizontal scrolling. Only useful when wrap is turned off.
 nnoremap <C-J> zl
 nnoremap <C-H> zh
 
-" Commands for convenience
+# Commands for convenience
 command! -bang Q q<bang>
 command! -bang Qa qa<bang>
 command! -bang QA qa<bang>
-command! -bang -complete=file W w<bang> <args>
+command! -bang -nargs=? -complete=file W w<bang> <args>
 command! -bang -nargs=? -complete=file E e<bang> <args>
 
-" Leader mappings
-let mapleader = " "
-
-function! ToggleLineNumbers()
+def g:ToggleLineNumbers()
     set norelativenumber!
     set nonumber!
-endfunction
-nnoremap <leader>n :call ToggleLineNumbers()<CR>
+enddef
+nnoremap <leader>n :call g:ToggleLineNumbers()<CR>
 
-let s:comment_leaders = {
-    \ 'c' : '//',
-    \ 'cpp' : '//',
-    \ 'm' : '//',
-    \ 'mm' : '//',
-    \ 'vim' : '"',
-    \ 'python' : '#',
-    \ 'tex' : '%'
-\ }
+const comment_leaders = {
+    'c': '//',
+    'cpp': '//',
+    'm': '//',
+    'mm': '//',
+    'vim': '#',
+    'python': '#',
+    'tex': '%'
+}
 
-function! RemoveCommentLeadersNormal(count)
-    if has_key(s:comment_leaders, &filetype)
-        let leader = substitute(s:comment_leaders[&filetype], '\/', '\\/', 'g')
+def g:RemoveCommentLeadersNormal(count: number)
+    if has_key(comment_leaders, &filetype)
+        const leader = substitute(comment_leaders[&filetype], '\/', '\\/', 'g')
 
-        let cur_pos = getpos(".")
-        let current_line = cur_pos[1]
+        const cur_pos = getpos(".")
+        const current_line = cur_pos[1]
 
-        " TODO: consider making the removal of the comment leader depend on
-        " whether or not the previous line has the leader.
-        if getline(current_line) =~ '^\s*' . leader
-            let lastline = current_line + (a:count == 0 ? 1 : a:count)
-            let command = join([(current_line+1), ",", lastline, 's/^\s*', leader, "\s*//e"], "")
+        # TODO: consider making the removal of the comment leader depend on
+        # whether or not the previous line has the leader.
+        if getline(current_line) =~ '^\s*' .. leader
+            const lastline = current_line + (count == 0 ? 1 : count)
+            const command = ':' .. join([(current_line + 1), ",", lastline, 's/^\s*', leader, "\s*//e"], "")
             execute command
         endif
 
-        call setpos(".", cur_pos)
+        setpos(".", cur_pos)
     endif
 
-    execute join(["normal! ", (a:count+1), "J"], "")
-endfunction
+    execute join(["normal! ", (count + 1), "J"], "")
+enddef
 
-function! RemoveCommentLeadersVisual() range
-    if has_key(s:comment_leaders, &filetype)
-        let leader = substitute(s:comment_leaders[&filetype], '\/', '\\/', 'g')
+def g:RemoveCommentLeadersVisual()
+    if has_key(comment_leaders, &filetype)
+        const leader = substitute(comment_leaders[&filetype], '\/', '\\/', 'g')
+        const first_line = getpos("'<")[1]
+        const last_line = getpos("'>")[1]
 
-        if getline(a:firstline) =~ '^\s*' . leader
-            let command = join([(a:firstline + 1), ",", a:lastline, 's/^\s*', leader, '\s*//e'], "")
+        if getline(first_line) =~ '^\s*' .. leader
+            const command = ':' .. join([(first_line + 1), ",", last_line, 's/^\s*', leader, '\s*//e'], "")
             execute command
         endif
 
         normal! gvJ
-        " echo command
+        # echo command
     endif
-endfunction
-vnoremap <silent> J :call RemoveCommentLeadersVisual()<CR>
-nnoremap <silent> J :<C-U>call RemoveCommentLeadersNormal(v:count)<CR>
+enddef
 
-" NOTE: redrawtabline doesn't exist on all vim compiles so I have to check for
-" it. Use this function instead so that the check isn't done every time
-if exists(":redrawtabline")
-    function! RedrawTabLine()
+vnoremap <silent> J :<C-U>call g:RemoveCommentLeadersVisual()<CR>
+nnoremap <silent> J :call g:RemoveCommentLeadersNormal(v:count)<CR>
+
+# NOTE: redrawtabline doesn't exist on all vim compiles so I have to check for
+# it. Use this function instead so that the check isn't done every time
+if exists(":redrawtabline") != 0
+    def g:RedrawTabLine()
         redrawtabline
-    endfunction
+    enddef
 else
-    function! RedrawTabLine()
-    endfunction
+    def g:RedrawTabLine()
+    enddef
 endif
 
 augroup EnterAndLeave
-    " Enable and disable cursor line in other buffers
+    # Enable and disable cursor line in other buffers
     autocmd!
-    autocmd     WinEnter * set   cursorline | call RedrawTabLine()
-    autocmd     WinLeave * set nocursorline | call RedrawTabLine()
-    autocmd  InsertEnter * set nocursorline | call RedrawTabLine()
-    autocmd  InsertLeave * set   cursorline | call RedrawTabLine()
+    autocmd     WinEnter * set   cursorline | g:RedrawTabLine()
+    autocmd     WinLeave * set nocursorline | g:RedrawTabLine()
+    autocmd  InsertEnter * set nocursorline | g:RedrawTabLine()
+    autocmd  InsertLeave * set   cursorline | g:RedrawTabLine()
 
-    autocmd CmdlineEnter *                    call RedrawTabLine()
-    autocmd CmdlineLeave *                    call RedrawTabLine()
+    autocmd CmdlineEnter *                    g:RedrawTabLine()
+    autocmd CmdlineLeave *                    g:RedrawTabLine()
 
-    " autocmd CmdlineEnter / call OverrideModeName("Search") | call RedrawTabLine()
-    " autocmd CmdlineLeave / call OverrideModeName(0) | call RedrawTabLine()
+    # autocmd CmdlineEnter / OverrideModeName("Search") | g:RedrawTabLine()
+    # autocmd CmdlineLeave / OverrideModeName(0) | g:RedrawTabLine()
 
-    " autocmd CmdlineEnter ? call OverrideModeName("Reverse Search") | call RedrawTabLine()
-    " autocmd CmdlineLeave ? call OverrideModeName(0) | call RedrawTabLine()
+    # autocmd CmdlineEnter ? OverrideModeName("Reverse Search") | g:RedrawTabLine()
+    # autocmd CmdlineLeave ? OverrideModeName(0) | g:RedrawTabLine()
 
-    " I created these but they don't work as intended yet
-    " autocmd  VisualEnter *                    call RedrawTabLine()
-    " autocmd  VisualLeave *                    call RedrawTabLine()
+    # I created these but they don't work as intended yet
+    # autocmd  VisualEnter *                    g:RedrawTabLine()
+    # autocmd  VisualLeave *                    g:RedrawTabLine()
 augroup END
 
-" =============================================
-" Style changes
+# =============================================
+# Style changes
 
-" Change cursor shape in different mode (macOS default terminal)
-" For all cursor shapes visit
-" http://vim.wikia.com/wiki/Change_cursor_shape_in_different_modes
-"                 Blink   Static
-"         block ¦   1   ¦   2   ¦
-"     underline ¦   3   ¦   4   ¦
-" vertical line ¦   5   ¦   6   ¦
+# Change cursor shape in different mode (macOS default terminal)
+# For all cursor shapes visit
+# http://vim.wikia.com/wiki/Change_cursor_shape_in_different_modes
+#                 Blink   Static
+#         block ¦   1   ¦   2   ¦
+#     underline ¦   3   ¦   4   ¦
+# vertical line ¦   5   ¦   6   ¦
 
-let &t_SI.="\e[6 q" " Insert mode
-let &t_SR.="\e[4 q" " Replace mode
-let &t_EI.="\e[2 q" " Normal mode
+&t_SI ..= "\e[6 q" # Insert mode
+&t_SR ..= "\e[4 q" # Replace mode
+&t_EI ..= "\e[2 q" # Normal mode
 
-" Directory tree listing options
-let g:netrw_liststyle = 1
-let g:netrw_banner = 0
-let g:netrw_keepdir = 1
+# Directory tree listing options
+g:netrw_liststyle = 1
+g:netrw_banner = 0
+g:netrw_keepdir = 1
 
-" Docs: http://vimhelp.appspot.com/eval.txt.html
+# Docs: http://vimhelp.appspot.com/eval.txt.html
 set fillchars=stlnc:\|,vert:\|,fold:.,diff:.
 
-" let s:mode_name_override = 0
-" function! OverrideModeName(name)
-"     let s:mode_name_override = a:name
-" endfunction
+var mode_name_override = null_string
+def g:OverrideModeName(name: string)
+    mode_name_override = name
+enddef
 
-let s:current_mode = {
-    \ 'n'  : 'Normal',
-    \ 'i'  : 'Insert',
-    \ 'v'  : 'Visual',
-    \ 'V'  : 'Visual Line',
-    \ '' : 'Visual Block',
-    \ 'R'  : 'Replace',
-    \ 'c'  : 'Command Line',
-    \ 't'  : 'Terminal'
-\ }
+const current_mode = {
+    'n':  'Normal',
+    'i':  'Insert',
+    'v':  'Visual',
+    'V':  'Visual Line',
+    '': 'Visual Block',
+    'R':  'Replace',
+    'c':  'Command Line',
+    't':  'Terminal'
+}
 
-function! GetCurrentMode()
-    " if s:mode_name_override isnot 0
-    "     return s:mode_name_override
-    " else
+def g:GetCurrentMode(): string 
+    # if mode_name_override isnot 0
+    #     return mode_name_override
+    # else
 
-    return get(s:current_mode, mode(), mode())
+    return get(current_mode, mode(), mode())
 
-    " endif
-endfunction
+    # endif
+enddef
 
-" Hours (24-hour clock) followed by minutes
-let s:timeformat = has('win32') ? '%H:%M' : '%k:%M'
+# Hours (24-hour clock) followed by minutes
+const timeformat = has('win32') ? '%H:%M' : '%k:%M'
 
-" Custom tabs
-function! Tabs() abort
-    " NOTE: getbufinfo() gets all variables of all buffers
-    " Colours
-    let cur_tab_page = tabpagenr()
-    let n_tabs = tabpagenr("$")
-    let max_file_name_length = 30
+# Custom tabs
+def g:Tabs(): string
+    # NOTE: getbufinfo() gets all variables of all buffers
+    # Colours
+    const cur_tab_page = tabpagenr()
+    const n_tabs = tabpagenr("$")
+    const max_file_name_length = 30
 
-    " NOTE: Repeat is used to pre-allocate space, make sure that this is the
-    " correct number of characters, otherwise you'll get an error
+    # NOTE: Repeat is used to pre-allocate space, make sure that this is the
+    # correct number of characters, otherwise you'll get an error
 
-    let prefixes = [" ", GetCurrentMode(), " "]
-    " %= is the separator between left and right side of tabline
-    " %T specifies the end of the last tab
-    let suffixes = ["%T%#TabLineFill#%=%#TabLineSel# ", strftime(s:timeformat), " "]
+    const prefixes = [" ", g:GetCurrentMode(), " "]
+    # %= is the separator between left and right side of tabline
+    # %T specifies the end of the last tab
+    const suffixes = ["%T%#TabLineFill#%=%#TabLineSel# ", strftime(timeformat), " "]
 
-    let num_prefixes = len(prefixes)
-    let num_suffixes = len(suffixes)
+    const num_prefixes = len(prefixes)
+    const num_suffixes = len(suffixes)
 
-    let strings_per_tab = 7
-    let s = repeat(['EMPTY!!!'], num_prefixes + n_tabs * strings_per_tab + num_suffixes)
+    const strings_per_tab = 7
+    final s = repeat(['EMPTY!!!'], num_prefixes + n_tabs * strings_per_tab + num_suffixes)
 
-    " TODO: Make this a different colour
+    # TODO: Make this a different colour
     for i in range(num_prefixes)
-        let s[i] = prefixes[i]
+        s[i] = prefixes[i]
     endfor
 
     for i in range(num_suffixes)
-        let s[i - num_suffixes] = suffixes[i]
+        s[i - num_suffixes] = suffixes[i]
     endfor
-
-    " Previously this was initialized to an empty list and I was using
-    " extend() to add elements
-    " let s = [] " Not sure if a list is faster than a string but there is no stringbuilder in vimscript
 
     for i in range(n_tabs)
-        let n = i + 1
-        let bufnum = tabpagebuflist(n)[tabpagewinnr(n) - 1]
+        const n = i + 1
+        const bufnum = tabpagebuflist(n)[tabpagewinnr(n) - 1]
 
-        " %<num>T specifies the beginning of a tab
-        let s[num_prefixes + i * strings_per_tab + 0] = "%"
-        let s[num_prefixes + i * strings_per_tab + 1] = n
+        # %<num>T specifies the beginning of a tab
+        s[num_prefixes + i * strings_per_tab + 0] = "%"
+        s[num_prefixes + i * strings_per_tab + 1] = string(n)
 
-        let s[num_prefixes + i * strings_per_tab + 2] = n == cur_tab_page ? "T%#TabLineSel# " : "T%#TabLine# "
+        s[num_prefixes + i * strings_per_tab + 2] = n == cur_tab_page ? "T%#TabLineSel# " : "T%#TabLine# "
 
-        let s[num_prefixes + i * strings_per_tab + 3] = n
+        s[num_prefixes + i * strings_per_tab + 3] = string(n)
 
-        " '-' for non-modifiable buffer, '+' for modified, ':' otherwise
-        let modifiable = getbufvar(bufnum, "&modifiable")
-        let modified   = getbufvar(bufnum, "&modified")
-        let s[num_prefixes + i * strings_per_tab + 4] = !modifiable ?  "- " : modified ? "* " : ": "
+        # '-' for non-modifiable buffer, '+' for modified, ':' otherwise
+        const modifiable = bufnum->getbufvar("&modifiable")
+        const modified   = bufnum->getbufvar("&modified")
+        s[num_prefixes + i * strings_per_tab + 4] = !modifiable ?  "- " : modified ? "* " : ": "
 
-        let name = bufname(bufnum)
-        let s[num_prefixes + i * strings_per_tab + 5] = name == "" ? "[New file]" : (len(name) >= max_file_name_length ? "<" . name[-max_file_name_length:] : name)
+        const name = bufnum->bufname()
+        s[num_prefixes + i * strings_per_tab + 5] = name == "" ? "[New file]" : (len(name) >= max_file_name_length ? "<" .. name[-max_file_name_length : ] : name)
 
-        let s[num_prefixes + i * strings_per_tab + 6] = " "
+        s[num_prefixes + i * strings_per_tab + 6] = " "
     endfor
 
-    return join(s, "")
-endfunction
+    return s->join("")
+enddef
 
-" Can type unicode codepoints with C-V u <codepoint> (ex. 2002)
-" Maybe put the tabs in the status bar or vice-versa (probably better in the
-" tab bar so that information is not duplicated
-function! StatusLine() abort
-    let winnum = winnr() " tabpagebuflist(n)[tabpagewinnr(n) - 1]
-    let bufnum = winbufnr(winnum)
-    let name   =  bufname(bufnum)
+# Can type unicode codepoints with C-V u <codepoint> (ex. 2002)
+# Maybe put the tabs in the status bar or vice-versa (probably better in the
+# tab bar so that information is not duplicated
+def g:StatusLine(): string
+    const winnum = winnr() # tabpagebuflist(n)[tabpagewinnr(n) - 1]
+    const bufnum = winbufnr(winnum)
+    const name   =  bufname(bufnum)
 
-    let result  = ""
+    var result  = ""
 
     if bufnum == bufnr("%")
-        let result .= " " . GetCurrentMode()
+        result ..= " " .. g:GetCurrentMode()
     endif
 
-    " let result .= " " . winnum 
-    let result .= " > " . name
-    let filetype = getbufvar(bufnum, "&filetype")
+    # var result ..= " " .. winnum 
+    result ..= " > " .. name
+    var filetype = getbufvar(bufnum, "&filetype")
     if len(filetype) != 0
-        let result .= " " . l:filetype
+        result ..= " " .. filetype
     endif
 
-    let modifiable = getbufvar(bufnum, "&modifiable")
-    let modified   = getbufvar(bufnum, "&modified")
-    let result .= !modifiable ? " -" : modified ? " +" : ""
+    var modifiable = getbufvar(bufnum, "&modifiable")
+    var modified   = getbufvar(bufnum, "&modified")
+    result ..= !modifiable ? " -" : modified ? " +" : ""
 
-    return result . " "
-endfunction
+    return result .. " "
+enddef
 
 set statusline=%!StatusLine()
 set tabline=%!Tabs()
 
-call timer_stopall()
-function! RedrawTabLineRepeated(timer)
-    " Periodically redraw the tabline so that the current time is correct
-    " echo "Redrawing tab line repeated " . strftime('%H:%M:%S')
-    call RedrawTabLine()
-endfunction
-function! RedrawTabLineFirst(timer)
-    " The first redraw of the tab line so that it updates on the minute
-    " echo "Redrawing tab line first " . strftime('%H:%M:%S')
-    call RedrawTabLine()
-    call timer_start(1 * 1000 * 60, 'RedrawTabLineRepeated', {'repeat':-1})
-endfunction
+timer_stopall()
+def g:RedrawTabLineRepeated(timer: any)
+    # Periodically redraw the tabline so that the current time is correct
+    # echo "Redrawing tab line repeated " .. strftime('%H:%M:%S')
+    g:RedrawTabLine()
+enddef
 
-let s:seconds_until_next_minute = 60 - str2nr(strftime('%S'))
-call timer_start(s:seconds_until_next_minute * 1000, 'RedrawTabLineFirst')
+def g:RedrawTabLineFirst(timer: any)
+    # The first redraw of the tab line so that it updates on the minute
+    # echo "Redrawing tab line first " .. strftime('%H:%M:%S')
+    g:RedrawTabLine()
+    timer_start(1 * 1000 * 60, g:RedrawTabLineRepeated, { 'repeat': -1 })
+enddef
 
-" ============================================
-" Color Additions
-" Highlighting in comments
+timer_start((60 - str2nr(strftime('%S'))) * 1000, g:RedrawTabLineFirst)
 
-" NOTE: Reloading causes tests above to stop working, just use :e to reload
-" the file
+# ============================================
+# Color Additions
+# Highlighting in comments
+
+# NOTE: Reloading causes tests above to stop working, just use :e to reload
+# the file
 augroup my_todo
     autocmd!
     autocmd Syntax *
-        \   syn keyword CustomYellow     containedin=[a-zA-Z]*CommentL\? TODO OPTIMIZE HACK
-        \ | syn keyword CustomGreen      containedin=[a-zA-Z]*CommentL\? NOTE INCOMPLETE
-        \ | syn keyword CustomRed        containedin=[a-zA-Z]*CommentL\? XXX FIX FIXME BUG IMPORTANT
-        \ | syn keyword CustomBlue       containedin=[a-zA-Z]*CommentL\? REVIEW SIMPLIFY
+            \   syn keyword CustomYellow     containedin=[a-zA-Z]*CommentL\? TODO OPTIMIZE HACK
+            \ | syn keyword CustomGreen      containedin=[a-zA-Z]*CommentL\? NOTE INCOMPLETE
+            \ | syn keyword CustomRed        containedin=[a-zA-Z]*CommentL\? XXX FIX FIXME BUG IMPORTANT
+            \ | syn keyword CustomBlue       containedin=[a-zA-Z]*CommentL\? REVIEW SIMPLIFY
 augroup END
 
-" cterm colours are not correct
+# cterm colours are not correct
 hi CustomRed         guifg=#eb4034 guibg=NONE ctermfg=160 ctermbg=NONE gui=none cterm=none
 hi CustomYellow      guifg=#d7d7af guibg=NONE ctermfg=187 ctermbg=NONE gui=none cterm=none
 hi CustomGreen       guifg=#55bd53 guibg=NONE ctermfg=112 ctermbg=NONE gui=none cterm=none
@@ -562,550 +560,542 @@ hi CustomDarkBlue    guifg=#5f87ff guibg=NONE ctermfg=69  ctermbg=NONE gui=none 
 hi CustomHotPink     guifg=#d75faf guibg=NONE ctermfg=169 ctermbg=NONE gui=none cterm=none
 hi CustomPurple      guifg=#950087 guibg=NONE ctermfg=90  ctermbg=NONE gui=none cterm=none
 
-" ============================================
-" Common variables that may be needed by other functions
-let g:path_separator = has('win32') ? '\' : '/'
+# ============================================
+# Common variables that may be needed by other functions
+const path_separator = has('win32') ? '\' : '/'
+const header = [
+    '/*',
+    '  File: {file_name}',
+    '  Date: {date}',
+    '  Creator: {creator}',
+    '  Notice: (C) Copyright %Y by {copyright_holder}. All rights reserved.',
+    '*/',
+]
 
-let g:header = ['/*',
-            \ '  File: {file_name}',
-            \ '  Date: {date}',
-            \ '  Creator: {creator}',
-            \ '  Notice: (C) Copyright %Y by {copyright_holder}. All rights reserved.',
-            \ '*/',
-            \ ]
+const header_sub_options = {
+    "date_format":      "%d %B %Y",
+    "creator":          "Alexandru Filip",
+    "copyright_holder": "Alexandru Filip",
+}
 
-let g:header_sub_options = {
-            \    'date_format' : "%d %B %Y",
-            \    'creator'     : 'Alexandru Filip',
-            \    'copyright_holder' : 'Alexandru Filip'
-            \ }
+# TODO: Make the headers project specific
+def g:CreateSourceHeader()
+    const file_name = expand('%:t')
+    const file_extension = split(file_name, '\.')[1]
+    const date = strftime(header_sub_options['date_format'])
+    const year = strftime("%Y")
 
-" TODO: Make the headers project specific
-function! CreateSourceHeader()
-    let file_name = expand('%:t')
-    let file_extension = split(file_name, '\.')[1]
-    let date = strftime(g:header_sub_options['date_format'])
-    let year = strftime("%Y")
-
-    let l:header = []
-    for str in g:header
-
-        let start_idx = 0
+    final header_lines = []
+    for str in header
+        var var_str = str
+        var start_idx = 0
         while 1
-            let option_idx =  match(str, '{[A-Za-z_]\+}', start_idx)
+            var option_idx =  match(var_str, '{[A-Za-z_]\+}', start_idx)
 
             if option_idx == -1
                 break
             endif
 
-            let end_idx = match(str, '}', option_idx)
-            let length = end_idx - option_idx - 1
+            var end_idx = match(var_str, '}', option_idx)
+            var length = end_idx - option_idx - 1
 
-            let key = str[option_idx:end_idx]
+            var key = var_str[option_idx : end_idx]
 
+            var value = null_string
             if key == '{file_name}'
-                let value = file_name
+                value = file_name
             elseif key == '{date}'
-                let value = date
-            elseif has_key(g:header_sub_options, key[1:-2])
-                let value = get(g:header_sub_options, key[1:-2])
+                value = date
+            elseif has_key(header_sub_options, key[1 : -2])
+                value = get(header_sub_options, key[1 : -2])
             else
-                let value = 0
-                let start_idx = end_idx + 1
+                start_idx = end_idx + 1
             endif
 
-            if value isnot 0
-                let str = substitute(str, key, value, 'g')
-                let start_idx = option_idx + len(value)
+            if value isnot null_string
+                var_str = substitute(var_str, key, value, 'g')
+                start_idx = option_idx + len(value)
             endif
         endwhile
 
-        let str = strftime(str)
-        call add(l:header, str)
+        var_str = strftime(var_str)
+        add(header_lines, var_str)
     endfor
 
-    call append(0, l:header)
+    append(0, header_lines)
 
     if file_extension =~ '^[hH]\(pp\|PP\)\?$'
-        let modified_filename = substitute(toupper(file_name), '[^A-Z]', '_', 'g')
+        var modified_filename = substitute(toupper(file_name), '[^A-Z]', '_', 'g')
 
-        let guard = [
-                    \ '#ifndef ' . modified_filename,
-                    \ '#define ' . modified_filename,
-                    \ '',
-                    \ '',
-                    \ '',
-                    \ '#endif',
-                    \ ]
-        call append(line("$"), guard)
+        var guard = [
+                    '#ifndef ' .. modified_filename,
+                    '#define ' .. modified_filename,
+                    '',
+                    '',
+                    '',
+                    '#endif',
+                    ]
+        append(line("$"), guard)
 
-        let pos = getpos("$")
-        let pos[1] -= 2
-        call setpos(".", pos)
+        var pos = getpos("$")
+        pos[1] -= 2
+        setpos(".", pos)
     endif
-endfunction
+enddef
 
 augroup FileHeaders
     autocmd!
-    autocmd BufNewFile *.c,*.cpp,*.h,*.hpp call CreateSourceHeader()
+    autocmd BufNewFile *.c,*.cpp,*.h,*.hpp call g:CreateSourceHeader()
 augroup END
 
-" = Terminal commands ========================
+# = Terminal commands ========================
 
-" Search for a script named "build.bat" moving up from the current path and run it.
-" TODO: find out how to compile through vim on windows
-let s:compile_script_name = has('win32') ? 'build.bat' : './compile'
+# Search for a script named "build.bat" moving up from the current path and run it.
+# TODO: find out how to compile through vim on windows
+const compile_script_name = has('win32') ? 'build.bat' : './compile'
 
-function! IsTerm()
-    return get(getwininfo(bufwinid(bufnr()))[0], 'terminal', 0)
-endfunction
+def IsTerm(): bool
+    return get(getwininfo(bufwinid(bufnr()))[0], 'terminal', 0) != 0
+enddef
 
-function! IsTermAlive()
-    let job = term_getjob(bufnr())
-    return job != v:null && job_status(job) != "dead"
-endfunction
+def IsTermAlive(): bool
+    const job = bufnr()->term_getjob()
+    return type(job) != type(v:none) && job->job_status() != "dead"
+enddef
 
-function! SwitchToOtherPaneOrCreate()
-    let start_win = winnr()
-    let layout = winlayout()
+def SwitchToOtherPaneOrCreate()
+    var start_win = winnr()
+    var layout = winlayout()
     if layout[0] == 'leaf'
-        " Create new vertical pane and go to left one
+        # Create new vertical pane and go to left one
         wincmd v
         wincmd l
     elseif layout[0] == 'row'
-        " Buffers layed out side by side
+        # Buffers layed out side by side
         wincmd l
         if winnr() == start_win
             wincmd h
         endif
     elseif layout[0] == 'col'
-        " Buffers layed out one on top of the other
+        # Buffers layed out one on top of the other
         wincmd j
         if winnr() == start_win
             wincmd k
         endif
     endif
-endfunction
+enddef
 
-function! GotoLineFromTerm()
+def g:GotoLineFromTerm()
     if IsTerm()
-        let line_contents = getline(".")
-        let regex = has('win32') ? '[A-Za-z0-9\.:\\]\+([0-9]\+)' : '^[A-Za-z0-9/\-\.]\+:[0-9]\+:'
+        var line_contents = getline(".")
+        var regex = has('win32') ? '[A-Za-z0-9\.:\\]\+([0-9]\+)' : '^[A-Za-z0-9/\-\.]\+:[0-9]\+:'
 
         if match(line_contents, regex) != -1
+            var filepath: string
+            var line_num: number
+            var col_num: number
             if has('win32')
-                let  open_paren = match(line_contents, '(', 0)
-                let close_paren = match(line_contents, ')', open_paren)
+                var  open_paren = match(line_contents, '(', 0)
+                var close_paren = match(line_contents, ')', open_paren)
 
-                let filepath = line_contents[:open_paren-1]
-                let line_num = line_contents[open_paren+1:close_paren-1]
-                let col_num = 0
+                filepath = line_contents[ : open_paren-1]
+                line_num = line_contents[open_paren + 1 : close_paren - 1]
+                col_num = 0
 
             else
-                let [filepath, line_num, col_num] = split(line_contents, ":")[:2]
+                const [filepath_str, line_num_str, col_num_str] = split(line_contents, ":")[ : 2]
+                filepath = filepath_str
+                line_num = str2nr(line_num_str)
+                col_num  = str2nr(col_num_str)
             endif
 
-            let line_num = str2nr(line_num)
-            if col_num =~ '^[0-9]\+'
-                let col_num = str2nr(col_num)
-            else
-                let col_num = 0
-            endif
-
-            call SwitchToOtherPaneOrCreate()
-            " NOTE: We might want to save the current file before switching
-            execute "edit " . filepath
+            SwitchToOtherPaneOrCreate()
+            # NOTE: We might want to save the current file before switching
+            execute "edit " .. filepath
 
             if col_num == 0
-                let col_num = indent(line_num) + 1
+                col_num = indent(line_num) + 1
             endif
 
-            call setpos(".", [0, line_num, col_num, 0])
+            setpos(".", [0, line_num, col_num, 0])
             normal! zz
         else
-            echo join(["Line does not match known error message format (", regex, ")"], "")
+            echo ["Line does not match known error message format (", regex, ")"]->join("")
         endif
     endif
-endfunction
+enddef
 
-function! DoCommandsInTerm(shell, commands, parent_dir, message)
-    " Currently, this assumes you only have one split and uses only the top-most
-    " part of the layout as the guide.
+def DoCommandsInTerm(shell: string, commands: string, parent_dir: string, message: string)
+    # Currently, this assumes you only have one split and uses only the top-most
+    # part of the layout as the guide.
 
-    " NOTE: The problem with this is that a terminal in a split that is not
-    " right beside the current one will not be reused. This will create a new
-    " terminal.
+    # NOTE: The problem with this is that a terminal in a split that is not
+    # right beside the current one will not be reused. This will create a new
+    # terminal.
 
     if !IsTerm()
-        call SwitchToOtherPaneOrCreate()
+        SwitchToOtherPaneOrCreate()
     endif
 
-    let all_commands = a:commands
+    var all_commands = commands
 
-    if a:parent_dir isnot 0
-        let all_commands = join(['cd "', a:parent_dir, '" && ', all_commands], "")
+    if parent_dir isnot null_string
+        all_commands = ['cd "', parent_dir, '" && ', all_commands]->join("")
     endif
 
-    if a:message isnot 0
-        let all_commands .= ' && echo ' . a:message
+    if message isnot null_string
+        all_commands ..= ' && echo ' .. message
     endif
 
     if IsTermAlive()
         if get(job_info(term_getjob(bufnr())), 'cmd', [''])[0] =~ 'zsh'
-            let all_commands = join(["\<Esc>cc", all_commands, "\r\n"], "")
+            all_commands = ["\<Esc>cc", all_commands, "\r\n"]->join("")
         endif
 
-        call term_sendkeys(bufnr(), all_commands)
+        term_sendkeys(bufnr(), all_commands)
     else
-        let cmd = join(["terminal++noclose ++curwin", a:shell, all_commands], " ")
+        var cmd = ["terminal ++noclose ++curwin", shell, all_commands]->join(" ")
         execute cmd
     endif
-endfunction
+enddef
 
-function! SearchAndRun(script_name)
-    " NOTE: I'm separating this out because it seems like it would be handy
-    " for running tests as well
+def SearchAndRun(script_name: string)
+    # NOTE: I'm separating this out because it seems like it would be handy
+    # for running tests as well
 
-    let working_dir = has('win32') ? [] : [""]
-    call extend(working_dir, split(getcwd(), g:path_separator))
+    var working_dir = has('win32') ? [] : [""]
+    extend(working_dir, split(getcwd(), path_separator))
 
     while len(working_dir) > 0
-        let directory_path = join(working_dir, g:path_separator)
-        if executable(join([directory_path, g:path_separator, a:script_name], ""))
-            " One problem with this is that I can't scroll through the
-            " history to see all the errors from the beginning
-            let script = a:script_name
+        var directory_path = working_dir->join(path_separator)
+        if executable(join([directory_path, path_separator, script_name], ""))
+            # One problem with this is that I can't scroll through the
+            # history to see all the errors from the beginning
+            var script = script_name
+            var completed_message = "Completed Successfully"
 
-            let completed_message = "Compiled Successfully"
             if has('win32')
-                let script = 'C:\tools\shell-init.bat && ' . script
-                let completed_message = 0
+                script = 'C:\tools\shell-init.bat && ' .. script
+                completed_message = null_string
             endif
 
-            call DoCommandsInTerm('++shell', script, directory_path, completed_message)
+            DoCommandsInTerm('++shell', script, directory_path, completed_message)
             return
         endif
-        let working_dir = working_dir[:-2] " remove last path element
+        working_dir = working_dir[ : -2] # remove last path element
     endwhile
-    echo join(["No file named \"", a:script_name, "\" found"], "")
-endfunction
+    echo join(["No file named \"", script_name, "\" found"], "")
+enddef
 
-function! SearchAndCompile()
-    call SearchAndRun(s:compile_script_name)
-endfunction
+def g:SearchAndCompile()
+    SearchAndRun(compile_script_name)
+enddef
 
-nnoremap <silent> <leader>g :call GotoLineFromTerm()<CR>
-nnoremap <silent> <leader>c :call SearchAndCompile()<CR>
+nnoremap <silent> <leader>g :call g:GotoLineFromTerm()<CR>
+nnoremap <silent> <leader>c :call g:SearchAndCompile()<CR>
 
-" = Man =================================
+# = Man =================================
 
 if has('win32')
-    function! ManEntry(name)
-        execute "vertical term ++close man " . a:name
-    endfunction
-    command! -nargs=1 Man :call ManEntry(<q-args>)
+    def ManEntry(name: string)
+        execute "vertical term ++close man " .. name
+    enddef
+    command! -nargs=1 Man :ManEntry(<q-args>)
 endif
 
-" =======================================
+# =======================================
 
-function! RenameFiles()
-    " NOTE: Does not work on Windows, yet.
-    " Empty lines are allowed
-    let lines = filter(getline(1, '$'), {idx, val -> len(val) > 0})
-    let file_list = split(system("ls"), '\n')
+def g:RenameFiles()
+    # NOTE: Does not work on Windows, yet.
+    # Empty lines are allowed
+    const lines = filter(getline(1, '$'), (idx: number, val: string) => {
+        return len(val) > 0
+    })
+
+    const file_list = split(system("ls"), '\n')
 
     if len(lines) != len(file_list)
         echoerr join(["Number of lines in buffer (", len(lines),
-                    \ ") does not match number of files in current directory (", 
-                    \ len(file_list), ")"], "")
+                    ") does not match number of files in current directory (", 
+                    len(file_list), ")"], "")
         return
     endif
 
-    let commands = repeat([''], len(file_list))
+    final commands = repeat([''], len(file_list))
     for index in range(len(file_list))
-        " TODO: replace characters that need escaping with \char
-        let commands[index] = join(["mv \"", file_list[index], "\" \"", lines[index], "\""], "")
+        # TODO: replace characters that need escaping with \char
+        commands[index] = join(["mv \"", file_list[index], "\" \"", lines[index], "\""], "")
     endfor
 
     normal ggdG
     put =commands
 
-    " I would still have to make sure that all of the appropriate characters
-    " in the filename, like quotes, are escaped.
-    "
-    " Start by running :r !ls
-    " Change names within the document
-    " Run :w !zsh after this (use your shell of choice. Can get this with &shell)
-endfunction
-command! RenameFiles :call RenameFiles()
+    # I would still have to make sure that all of the appropriate characters
+    # in the filename, like quotes, are escaped.
+    #
+    # Start by running :r !ls
+    # Change names within the document
+    # Run :w !zsh after this (use your shell of choice. Can get this with &shell)
+enddef
+command! RenameFiles :call g:RenameFiles()
 
-" = Projects ==================================
+# = Projects ==================================
 
-" NOTE: Option idea for project:
-"   C/C++ with compile scripts and main
-"   Client projects (compile scripts and a folder inside with the actual code)
-" TODO: Project files in json format to get
-let g:projects_folder = has('win32') ? 'C:\projects' : '~/projects'
-function! ProjectsCompletionList(ArgLead, CmdLine, CursorPos)
-    if a:ArgLead =~ '^-.\+' || a:ArgLead =~ '^++.\+'
-        " TODO: command completion for options
+# NOTE: Option idea for project:
+#   C/C++ with compile scripts and main
+#   Client projects (compile scripts and a folder inside with the actual code)
+# TODO: Project files in json format to get
+const projects_folder = has('win32') ? 'C:\projects' : '~/projects'
+def ProjectsCompletionList(ArgLead: string, CmdLine: string, CursorPos: number): list<string>
+    if ArgLead =~ '^-.\+' || ArgLead =~ '^++.\+'
+        # TODO: command completion for options
+        return []
     else
-        let result = []
-        let arg_match = join(["^", a:ArgLead, ".*"], "")
+        final result = []
+        const arg_match = join(["^", ArgLead, ".*"], "")
 
-        for path in split(globpath(g:projects_folder, "*"), "\n")
+        for path in split(globpath(projects_folder, "*"), "\n")
             if isdirectory(path)
-                let folder_name = split(path, g:path_separator)[-1]
+                const folder_name = split(path, path_separator)[-1]
                 if folder_name =~ arg_match
-                    call add(result, folder_name)
+                    add(result, folder_name)
                 endif
             endif
         endfor
 
         return result
     endif
-endfunction
+enddef
 
-let s:default_project_file = {
-    \ 'header' : g:header,
-    \ 'header_sub_options' : g:header_sub_options,
-    \ 'build_command' : s:compile_script_name
-\ }
+const default_project_file = {
+    'header': header,
+    'header_sub_options': header_sub_options,
+    'build_command': compile_script_name
+}
 
-function! GoToProjectOrMake(bang, command_line)
-    let path_start = 0
-    let options = []
+def g:GoToProjectOrMake(bang: bool, command_line: string)
+    var path_start = 0
+    final options = []
 
-    while path_start < len(a:command_line)
-        if match(a:command_line, '++', path_start) == path_start
-            let path_start += 2
-        elseif match(a:command_line, '-', path_start) == path_start
-            let path_start += 1
+    while path_start < len(command_line)
+        if match(command_line, '++', path_start) == path_start
+            path_start += 2
+        elseif match(command_line, '-', path_start) == path_start
+            path_start += 1
         else
             break
         endif
 
-        let option_end = match(a:command_line, '[ \t]\|$', path_start)
-        let option = a:command_line[path_start:option_end-1]
-        call add(options, option)
+        const option_end = match(command_line, '[ \t]\|$', path_start)
+        const option = command_line[path_start : option_end - 1]
+        add(options, option)
 
-        let path_start = match(a:command_line, '[^ \t]\|$', option_end)
+        path_start = match(command_line, '[^ \t]\|$', option_end)
     endwhile
 
-    let project_name = a:command_line[path_start:]
+    const project_name = command_line[path_start : ]
 
     if len(project_name) != 0
-        execute 'cd ' . g:projects_folder
+        execute 'cd ' .. projects_folder
         if !isdirectory(project_name)
             if filereadable(project_name)
-                if a:bang
-                    call delete(project_name)
+                if bang
+                    delete(project_name)
                 else
-                    echoerr project_name . ' exists and is not a directory. Use Project! to replace it with a new project.'
+                    echoerr project_name .. ' exists and is not a directory. Use Project! to replace it with a new project.'
                     return
                 endif
             endif
             echo join(['Created new project called "',  project_name, '"'], "")
-            call mkdir(project_name)
+            mkdir(project_name)
         endif
 
-        execute 'cd ' . project_name
+        execute 'cd ' .. project_name
         edit .
     else
         echoerr 'No project name specified'
         return
     endif
-endfunction
-command! -bang -nargs=1 -complete=customlist,ProjectsCompletionList  Project :call GoToProjectOrMake(<bang>0, <q-args>)
+enddef
+command! -bang -nargs=1 -complete=customlist,ProjectsCompletionList  Project :call g:GoToProjectOrMake(<bang>false, <q-args>)
 
 
-" = Search ====================================
+# = Search ====================================
 
-function! SearchFolder(searchTerm)
-    let searchTerm = a:searchTerm
-    let searchTerm = substitute(searchTerm, '\\', '\\\\', 'g')
-    let searchTerm = join(['"', substitute(searchTerm, '"', '\"', 'g'), '" .'], "")
-    call DoCommandsInTerm('grep -REn', searchTerm, 0, 0)
-endfunction
-command! -nargs=1 Search :call SearchFolder(<q-args>)
+def g:SearchFolder(searchTerm: string)
+    var localSearchTerm = substitute(searchTerm, '\\', '\\\\', 'g')
+    localSearchTerm = join(['"', substitute(searchTerm, '"', '\"', 'g'), '" .'], "")
+    DoCommandsInTerm('grep -REn', localSearchTerm, null_string, null_string)
+enddef
+command! -nargs=1 Search :call g:SearchFolder(<q-args>)
 
-" = RFC =======================================
-function! GetRFC(num)
-    " NOTE: Does not work on windows unless curl is installed
-    if a:num =~ '^[0-9]\+$'
-        let num = a:num
-        if len(num) < 4
-            if num == '0'
-                let num = '000'
-            else
-                let num = repeat('0', 4 - len(num)) . l:num
-            endif
+# = RFC =======================================
+def GetRFC(num: number)
+    # NOTE: Does not work on windows unless curl is installed
+    const numString = num == 0 ? '000' : printf("%04d", num)
+
+    const rfc_name = join(['rfc', numString, '.txt'], "")
+    const rfc_path = join([rfc_download_location, '/', rfc_name], "")
+
+    if filereadable(rfc_path)
+        # Do nothing here. Open file after if-else blocks
+    elseif executable('curl')
+        if !isdirectory(rfc_download_location)
+            mkdir(rfc_download_location)
         endif
-
-        let rfc_name = join(['rfc', l:num, '.txt'], "")
-        let rfc_path = join([g:rfc_download_location, '/', rfc_name], "")
-
-        if filereadable(rfc_path)
-            " Do nothing here. Open file after if-else blocks
-        elseif executable('curl')
-            if !isdirectory(g:rfc_download_location)
-                call mkdir(g:rfc_download_location)
-            endif
-            echo 'Downloading'
-            call system(join(['curl https://www.ietf.org/rfc/', rfc_name, " -o '", rfc_path, "'"], ""))
-        else
-            echoerr 'curl is not installed on this machine'
-            return
-        endif
-
-        call SwitchToOtherPaneOrCreate()
-        execute 'edit ' . rfc_path
-
+        echo 'Downloading'
+        system(join(['curl https://www.ietf.org/rfc/', rfc_name, " -o '", rfc_path, "'"], ""))
     else
-        echoerr join(['"', a:num, '" is not a number'], "")
-    endif
-endfunction
-command! -nargs=1 RFC :call GetRFC(<q-args>)
-
-" Can change this in the machine specific vimrc
-let g:rfc_download_location = $HOME . '/RFC-downloads'
-
-" Abbreviations in insert mode (should these be commands?
-iabbrev <silent> :Now:     <Esc>:let @x = strftime("%X")<CR>"xpa
-iabbrev <silent> :Today:   <Esc>:let @x = strftime("%d %b %Y")<CR>"xpa
-iabbrev <silent> :Random:  <Esc>:let @x = rand()<CR>"xpa
-
-" =============================================
-
-" From vim wiki to identify the syntax group under the cursor
-" nnoremap <F10> :echo "hi<" . synIDattr(           synID(line("."), col("."), 1) , "name") . '> trans<'
-"                          \ . synIDattr(           synID(line("."), col("."), 0) , "name") . "> lo<"
-"                          \ . synIDattr(synIDtrans(synID(line("."), col("."), 1)), "name") . ">"<CR>
-
-let g:OperatorList = {}
-let g:OperatorChar = 0
-let s:visual_modes = {    'v':'char',    'V':'line', '\<C-V>':'block',
-                     \ 'char':'char', 'line':'line',  'block':'block' }
-function! s:is_a_visual_mode(mode)
-    return has_key(s:visual_modes, a:mode)
-endfunction
-
-function! s:do_nothing(...)
-endfunction
-
-" This can't be a script-only (s:) function because it needs to be called from
-" the command-line.
-
-function! OperGetLine(col)
-    let position = getpos(".")
-    let result = { 'line':position[2], 'column':0 }
-
-    if a:col != 0
-        let result['column'] = len(getline("."))
+        echoerr 'curl is not installed on this machine'
+        return
     endif
 
-    return result
-endfunction
+    SwitchToOtherPaneOrCreate()
+    execute 'edit ' .. rfc_path
+enddef
+command! -nargs=1 RFC :GetRFC(<q-args>)
 
-function! PerformOperator(visual)
-    if g:OperatorChar isnot 0
-        call get(g:OperatorList, g:OperatorChar, funcref('s:do_nothing'))['handler'](a:visual)
-        let g:OperatorChar = 0
-    endif
-endfunction
+# Can change this in the machine specific vimrc
+const rfc_download_location = $HOME .. '/RFC-downloads'
 
-function! MakeOperator(char, func)
-    let func_holder = { 'func' : a:func }
-    function! func_holder.handler(visual) dict
-        let mode = get(s:visual_modes, a:visual, 0)
+# Abbreviations in insert mode (should these be commands?
+iabbrev <silent> :Now:     <Esc>:var @x = strftime("%X")<CR>"xpa
+iabbrev <silent> :Today:   <Esc>:var @x = strftime("%d %b %Y")<CR>"xpa
+iabbrev <silent> :Random:  <Esc>:var @x = rand()<CR>"xpa
 
-        if a:visual != 'char' && mode isnot 0
-            let [start_mark, end_mark] = ["'<", "'>"]
-        else
-            let [start_mark, end_mark] = ["'[", "']"]
-            let mode = 'normal'
-        endif
+# =============================================
 
-        let [start_line, start_column] = getpos(start_mark)[1:2]
-        let [  end_line,   end_column] = getpos(  end_mark)[1:2]
-        " echoerr start_line . " " . end_line
-        let start = { 'line':start_line, 'column':start_column }
-        let   end = { 'line':  end_line, 'column':  end_column }
-        call self['func'](mode, start, end)
-    endfunction
+# From vim wiki to identify the syntax group under the cursor
+# nnoremap <F10> :echo "hi<" .. synIDattr(           synID(line("."), col("."), 1) , "name") .. '> trans<'
+#                          \ .. synIDattr(           synID(line("."), col("."), 0) , "name") .. "> lo<"
+#                          \ .. synIDattr(synIDtrans(synID(line("."), col("."), 1)), "name") .. ">"<CR>
 
-    let char = a:char[0]
-    let g:OperatorList[char] = func_holder
-    " let escaped_char = substitute(char, '\', '\\\\', 'g')
+# var OperatorList = {}
+# var OperatorChar = 0
+# var visual_modes = {    'v':'char',    'V':'line', '\<C-V>':'block',
+#                      'char':'char', 'line':'line',  'block':'block' }
+# def is_a_visual_mode(mode)
+#     return has_key(visual_modes, mode)
+# enddef
+# 
+# def do_nothing(...)
+# enddef
+# 
+# # This can't be a script-only () function because it needs to be called from
+# # the command-line.
+# 
+# def OperGetLine(col)
+#     var position = getpos(".")
+#     final result = { 'line':position[2], 'column':0 }
+# 
+#     if col != 0
+#         final result['column'] = len(getline("."))
+#     endif
+# 
+#     return result
+# enddef
+# 
+# def PerformOperator(visual)
+#     if OperatorChar isnot 0
+#         get(OperatorList, OperatorChar, funcref('do_nothing'))['handler'](visual)
+#         var OperatorChar = 0
+#     endif
+# enddef
+# 
+# def MakeOperator(char, func)
+#     var func_holder = { 'func' : func }
+#     def func_holder.handler(visual) dict
+#         var mode = get(visual_modes, visual, 0)
+# 
+#         if visual != 'char' && mode isnot 0
+#             var [start_mark, end_mark] = ["'<", "'>"]
+#         else
+#             var [start_mark, end_mark] = ["'[", "']"]
+#             var mode = 'normal'
+#         endif
+# 
+#         var [start_line, start_column] = getpos(start_mark)[1:2]
+#         var [  end_line,   end_column] = getpos(  end_mark)[1:2]
+#         # echoerr start_line .. " " .. end_line
+#         var start = { 'line':start_line, 'column':start_column }
+#         var   end = { 'line':  end_line, 'column':  end_column }
+#         self['func'](mode, start, end)
+#     enddef
+# 
+#     var char = char[0]
+#     var OperatorList[char] = func_holder
+#     # var escaped_char = substitute(char, '\', '\\\\', 'g')
+# 
+#     var normal_command = "nnoremap <silent> " .. char ..  " :let OperatorChar = '" .. char .. "'<CR>:set operatorfunc=PerformOperator<CR>g@"
+#     var oper_func_get  = "OperatorList['" .. char .. "']['handler']"
+#     var visual_command = "vnoremap <silent> " .. char ..  " :<C-U>" .. oper_func_get .. "(visualmode())<CR>"
+# 
+#     silent execute normal_command
+#     silent execute visual_command
+# enddef
 
-    let normal_command = "nnoremap <silent> " . char .  " :let g:OperatorChar = '" . char . "'<CR>:set operatorfunc=PerformOperator<CR>g@"
-    let oper_func_get  = "OperatorList['" . char . "']['handler']"
-    let visual_command = "vnoremap <silent> " . char .  " :<C-U>call " . oper_func_get . "(visualmode())<CR>"
+# def Backslash(mode, start, end)
+#     echo "Backslash " mode start end
+# enddef
 
-    silent execute normal_command
-    silent execute visual_command
-endfunction
+# nnoremap <silent> \\ :Backslash("normal", OperGetLine(0), OperGetLine(-1))<CR>
+# nnoremap <silent> \/ :Backslash("normal", OperGetLine(0), OperGetLine(-1))<CR>
+# MakeOperator('\', funcref('Backslash'))
 
-" function! Backslash(mode, start, end)
-"     echo "Backslash " a:mode a:start a:end
-" endfunction
+# def OpenBracket(mode, start, end)
+#     echo "Open bracket " mode start end
+# enddef
 
-" nnoremap <silent> \\ :call Backslash("normal", OperGetLine(0), OperGetLine(-1))<CR>
-" nnoremap <silent> \/ :call Backslash("normal", OperGetLine(0), OperGetLine(-1))<CR>
-" call MakeOperator('\', funcref('Backslash'))
+# NOTE: So far I haven't been able to remap [[ and similar keymaps. I'm not sure
+# why.
+# nnoremap <silent> [[ :OpenBracket("normal", OperGetLine(0), OperGetLine(-1))<CR>
+# nnoremap <silent> [] :OpenBracket("normal", OperGetLine(0), OperGetLine(-1))<CR>
+# MakeOperator('[', funcref('OpenBracket'))
 
-" function! OpenBracket(mode, start, end)
-"     echo "Open bracket " a:mode a:start a:end
-" endfunction
+# def CloseBracket(mode, start, end)
+#     echo "Close bracket" mode start end
+# enddef
 
-" NOTE: So far I haven't been able to remap [[ and similar keymaps. I'm not sure
-" why.
-" nnoremap <silent> [[ :call OpenBracket("normal", OperGetLine(0), OperGetLine(-1))<CR>
-" nnoremap <silent> [] :call OpenBracket("normal", OperGetLine(0), OperGetLine(-1))<CR>
-" call MakeOperator('[', funcref('OpenBracket'))
-
-" function! CloseBracket(mode, start, end)
-"     echo "Close bracket" a:mode a:start a:end
-" endfunction
-
-" nnoremap <silent> ]] :call CloseBracket("normal", OperGetLine(0), OperGetLine(-1))<CR>
-" nnoremap <silent> ][ :call CloseBracket("normal", OperGetLine(0), OperGetLine(-1))<CR>
-" call MakeOperator(']', funcref('CloseBracket'))
+# nnoremap <silent> ]] :CloseBracket("normal", OperGetLine(0), OperGetLine(-1))<CR>
+# nnoremap <silent> ][ :CloseBracket("normal", OperGetLine(0), OperGetLine(-1))<CR>
+# MakeOperator(']', funcref('CloseBracket'))
 
 
-" set indentexpr=CustomIndent()
-" function! CustomIndent()
-"     let line_num = line(".")
-"     let prev_lnum = line_num
-"     let prev_line = ''
-"     let prev_indent = 0
-"     
-"     while 1
-"         let prev_lnum -= 1
-" 
-"         if prev_lnum <= 1
-"             break
-"         endif
-" 
-"         let prev_line = getline(prev_lnum)
-"         if prev_line != ''
-"             break
-"         endif
-"     endwhile
-" 
-"     let prev_indent = indent(prev_lnum)
-" 
-"     return cindent(line_num)
-" endfunction
+# set indentexpr=CustomIndent()
+# def CustomIndent()
+#     var line_num = line(".")
+#     var prev_lnum = line_num
+#     var prev_line = ''
+#     var prev_indent = 0
+#     
+#     while 1
+#         var prev_lnum -= 1
+# 
+#         if prev_lnum <= 1
+#             break
+#         endif
+# 
+#         var prev_line = getline(prev_lnum)
+#         if prev_line != ''
+#             break
+#         endif
+#     endwhile
+# 
+#     var prev_indent = indent(prev_lnum)
+# 
+#     return cindent(line_num)
+# enddef
 
-" For machine specific additions changes
-let s:local_vimrc_path = join([$HOME, '.local', 'vimrc'], g:path_separator)
-if filereadable(s:local_vimrc_path)
-    execute "source " . s:local_vimrc_path
+# For machine specific additions changes
+const local_vimrc_path = join([$HOME, '.local', 'vimrc'], path_separator)
+if filereadable(local_vimrc_path)
+    execute "source " .. local_vimrc_path
 endif
 
-" Re-source gvimrc when vimrc is reloaded
-let s:gvim_path = join([s:dot_vim_path, 'gvimrc'], g:path_separator)
-if has('gui') && filereadable(s:gvim_path)
-    execute "source " . s:gvim_path
+# Re-source gvimrc when vimrc is reloaded
+const gvim_path = join([dot_vim_path, 'gvimrc'], path_separator)
+if has('gui') && filereadable(gvim_path)
+    execute "source " .. gvim_path
 endif
+
+defcompile
