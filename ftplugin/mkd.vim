@@ -1,4 +1,5 @@
-" turn on linewrapping without linebreak in .md files
+vim9script
+# turn on linewrapping without linebreak in .md files
 set wrap
 set linebreak
-set nolist  " list disables linebreak
+set nolist # list disables linebreak

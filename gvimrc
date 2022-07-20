@@ -1,3 +1,4 @@
+vim9script
 " augroup Startup
 "     autocmd!
 "     autocmd GUIEnter * 

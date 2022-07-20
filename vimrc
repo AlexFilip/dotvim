@@ -53,23 +53,28 @@ set viminfo+=n$VIMRUNTIME/info # Out of sight, out of mind
 set display=lastline # For writing prose
 set noswapfile
 
-const search_path_separator = has('win32') ? ';' : ':'
-def AddToPath(...args: list<string>)
-    
-    # NOTE: Apparently regexp matching doesn't do its job here so I had to
-    # take matters into my own hands.
-    final paths = {} # As far as I know, vim doesn't have sets
-    for path in split($PATH, search_path_separator)
-        if path !=# '' && !has_key(paths, path)
-            paths[path] = ''
-        endif
+def MakeDict(keys: list<string>): dict<string>
+    final result: dict<string> = {}
+    for key in keys
+        result[key] = ''
     endfor
+    return result
+enddef
+
+const search_path_separator = has('win32') ? ';' : ':'
+
+def AddToPath(...args: list<string>)
+    # As far as I know, vim doesn't have sets
+    const paths = MakeDict(filter(split($PATH, search_path_separator), (index: number, path: string): bool => {
+        return path !=# ''
+    }))
 
     # Previously the filter used 'val !~# $PATH' but that didn't work
     # for some reason
     final new_components = filter(copy(args), (idx: number, val: any): bool => { 
         return (val !=# '' && !has_key(paths, val))
     })
+
     extend(new_components, [$PATH])
     $PATH = join(new_components, search_path_separator)
 enddef
@@ -125,29 +130,12 @@ nnoremap <silent> gce :tabnew<CR>
 nnoremap <silent> ge  :vnew \| wincmd H<CR>
 
 def g:MoveTab(multiplier: number, count: number)
-    var amount    = count ? count : 1
-    const cur_tab   = tabpagenr()
-    const n_tabs    = tabpagenr("$")
-    const new_place = cur_tab + multiplier * amount
+    const cur_tab    = tabpagenr()
+    const n_tabs     = tabpagenr("$")
+    const amount     = multiplier * max([count, 1])
+    const new_place  = min([max([cur_tab + amount, 1]), n_tabs])
 
-    if new_place <= 0
-        amount = cur_tab - 1
-    elseif new_place > n_tabs
-        amount = n_tabs - cur_tab
-    endif
-
-    if amount != 0
-        final cmd = ['tabmove ', '', multiplier * amount]
-
-        if multiplier > 0
-            cmd[1] = '+'
-        endif
-
-        const cmdString = join(cmd, "")
-
-        # echo "Moving Tabs " .. cmd
-        execute cmdString
-    endif
+    execute 'tabmove ' .. (new_place < cur_tab ? new_place - 1 : new_place)
 enddef
 
 nnoremap <silent> g{ :<C-U>call g:MoveTab(-1, v:count)<CR>
@@ -189,7 +177,7 @@ if !has('win32')
     const debugger = "lldb"
     def g:LaunchDebugger(vertical: bool, options: string)
         const prev_command = vertical ? "vertical" : "tabnew \|"
-        execute join([prev_command, " terminal ", options, " ++noclose ", debugger], "")
+        execute join([prev_command, "terminal", options, "++noclose", debugger], " ")
     enddef
     nnoremap <silent> ghd :LaunchDebugger(1, "")<CR>
     nnoremap <silent> gcd :LaunchDebugger(0, "++curwin")<CR>
@@ -226,14 +214,16 @@ nnoremap <Space> <nop>
 # Who needs Ex-mode these days?
 nnoremap Q <nop>
 
+# NOTE: cnoremap seems broken
 # Terminal movement in command line mode
 cnoremap <C-f> <Right>
 cnoremap <C-b> <Left>
 cnoremap <C-a> <C-b>
 # cnoremap <C-e> <C-e> # already exists
-cnoremap <C-d> <Del>
+cnoremap <c-d> <Del>
 
-cnoremap <C-W> \<\><Left><Left>
+cnoremap <c-w> \<\><Left><Left>
+
 
 # Search selected text
 var visual_search_len = 0
@@ -250,20 +240,15 @@ def g:ReselectSearched(reverse: bool)
 
     if first_pos[1] == last_pos[1]
         const line = getline(first_pos[1])
-        var searched = line[first_pos[2] - 1 : last_pos[2] - 1]
+        const searched = line[first_pos[2] - 1 : last_pos[2] - 1]
         visual_search_len = len(searched) - 1
         visual_search_reversed = reverse
 
-        var match_id = '[A-Za-z0-9_]'
-        if line[first_pos[2] - 1] =~ match_id && (first_pos[2] == 1 || line[first_pos[2] - 2] !~ match_id)
-            searched = '\<' .. searched
-        endif
+        const match_id = '[A-Za-z0-9_]'
+        const prefix = line[first_pos[2] - 1] =~ match_id && (first_pos[2] == 1         || line[first_pos[2] - 2] !~ match_id) ?  '\<' : ''
+        const suffix = line[ last_pos[2] - 1] =~ match_id && ( last_pos[2] == len(line) || line[ last_pos[2]]     !~ match_id) ?  '\>' : ''
 
-        if line[last_pos[2] - 1] =~  match_id && (last_pos[2] == len(line) || line[last_pos[2]] !~ match_id)
-            searched ..= '\>'
-        endif
-
-        @/ = searched
+        @/ = prefix .. searched .. suffix
         g:VisualSearchNext(false)
     else
         normal! gv
@@ -306,21 +291,21 @@ const comment_leaders = {
     'tex': '%'
 }
 
+def RemoveLeadingComments(first_line: number, LastLine: func: number)
+    # TODO: consider making the removal of the comment leader depend on
+    # whether or not the previous line has the leader.
+    const leader = substitute(comment_leaders[&filetype], '\/', '\\/', 'g')
+    if getline(first_line) =~ '^\s*' .. leader
+        const command = ':' .. join([(first_line + 1), ",", LastLine(), 's/^\s*', leader, "\s*//e"], "")
+        execute command
+    endif
+enddef
+
 def g:RemoveCommentLeadersNormal(count: number)
     if has_key(comment_leaders, &filetype)
-        const leader = substitute(comment_leaders[&filetype], '\/', '\\/', 'g')
-
         const cur_pos = getpos(".")
         const current_line = cur_pos[1]
-
-        # TODO: consider making the removal of the comment leader depend on
-        # whether or not the previous line has the leader.
-        if getline(current_line) =~ '^\s*' .. leader
-            const lastline = current_line + (count == 0 ? 1 : count)
-            const command = ':' .. join([(current_line + 1), ",", lastline, 's/^\s*', leader, "\s*//e"], "")
-            execute command
-        endif
-
+        RemoveLeadingComments(current_line, () => current_line + (count == 0 ? 1 : count))
         setpos(".", cur_pos)
     endif
 
@@ -329,17 +314,8 @@ enddef
 
 def g:RemoveCommentLeadersVisual()
     if has_key(comment_leaders, &filetype)
-        const leader = substitute(comment_leaders[&filetype], '\/', '\\/', 'g')
-        const first_line = getpos("'<")[1]
-        const last_line = getpos("'>")[1]
-
-        if getline(first_line) =~ '^\s*' .. leader
-            const command = ':' .. join([(first_line + 1), ",", last_line, 's/^\s*', leader, '\s*//e'], "")
-            execute command
-        endif
-
+        RemoveLeadingComments(getpos("'<")[1], () => getpos("'>")[1])
         normal! gvJ
-        # echo command
     endif
 enddef
 
@@ -496,21 +472,21 @@ def g:StatusLine(): string
     const bufnum = winbufnr(winnum)
     const name   =  bufname(bufnum)
 
-    var result  = ""
+    var   result = ""
 
     if bufnum == bufnr("%")
         result ..= " " .. g:GetCurrentMode()
     endif
 
-    # var result ..= " " .. winnum 
+    # result ..= " " .. winnum 
     result ..= " > " .. name
-    var filetype = getbufvar(bufnum, "&filetype")
+    const filetype = getbufvar(bufnum, "&filetype")
     if len(filetype) != 0
         result ..= " " .. filetype
     endif
 
-    var modifiable = getbufvar(bufnum, "&modifiable")
-    var modified   = getbufvar(bufnum, "&modified")
+    const modifiable = getbufvar(bufnum, "&modifiable")
+    const modified   = getbufvar(bufnum, "&modified")
     result ..= !modifiable ? " -" : modified ? " +" : ""
 
     return result .. " "
@@ -587,19 +563,20 @@ def g:CreateSourceHeader()
 
     final header_lines = []
     for str in header
-        var var_str = str
+        var var_str   = str
         var start_idx = 0
+
         while 1
-            var option_idx =  match(var_str, '{[A-Za-z_]\+}', start_idx)
+            const option_idx =  match(var_str, '{[A-Za-z_]\+}', start_idx)
 
             if option_idx == -1
                 break
             endif
 
-            var end_idx = match(var_str, '}', option_idx)
-            var length = end_idx - option_idx - 1
+            const end_idx = match(var_str, '}', option_idx)
+            const length = end_idx - option_idx - 1
 
-            var key = var_str[option_idx : end_idx]
+            const key = var_str[option_idx : end_idx]
 
             var value = null_string
             if key == '{file_name}'
@@ -625,9 +602,9 @@ def g:CreateSourceHeader()
     append(0, header_lines)
 
     if file_extension =~ '^[hH]\(pp\|PP\)\?$'
-        var modified_filename = substitute(toupper(file_name), '[^A-Z]', '_', 'g')
+        const modified_filename = substitute(toupper(file_name), '[^A-Z]', '_', 'g')
 
-        var guard = [
+        const guard = [
                     '#ifndef ' .. modified_filename,
                     '#define ' .. modified_filename,
                     '',
@@ -637,7 +614,7 @@ def g:CreateSourceHeader()
                     ]
         append(line("$"), guard)
 
-        var pos = getpos("$")
+        final pos = getpos("$")
         pos[1] -= 2
         setpos(".", pos)
     endif
@@ -664,8 +641,8 @@ def IsTermAlive(): bool
 enddef
 
 def SwitchToOtherPaneOrCreate()
-    var start_win = winnr()
-    var layout = winlayout()
+    const start_win = winnr()
+    const layout = winlayout()
     if layout[0] == 'leaf'
         # Create new vertical pane and go to left one
         wincmd v
@@ -687,16 +664,16 @@ enddef
 
 def g:GotoLineFromTerm()
     if IsTerm()
-        var line_contents = getline(".")
-        var regex = has('win32') ? '[A-Za-z0-9\.:\\]\+([0-9]\+)' : '^[A-Za-z0-9/\-\.]\+:[0-9]\+:'
+        const line_contents = getline(".")
+        const regex = has('win32') ? '[A-Za-z0-9\.:\\]\+([0-9]\+)' : '^[A-Za-z0-9/\-\.]\+:[0-9]\+:'
 
         if match(line_contents, regex) != -1
             var filepath: string
             var line_num: number
             var col_num: number
             if has('win32')
-                var  open_paren = match(line_contents, '(', 0)
-                var close_paren = match(line_contents, ')', open_paren)
+                const  open_paren = match(line_contents, '(', 0)
+                const close_paren = match(line_contents, ')', open_paren)
 
                 filepath = line_contents[ : open_paren-1]
                 line_num = line_contents[open_paren + 1 : close_paren - 1]
@@ -754,7 +731,7 @@ def DoCommandsInTerm(shell: string, commands: string, parent_dir: string, messag
 
         term_sendkeys(bufnr(), all_commands)
     else
-        var cmd = ["terminal ++noclose ++curwin", shell, all_commands]->join(" ")
+        const cmd = ["terminal ++noclose ++curwin", shell, all_commands]->join(" ")
         execute cmd
     endif
 enddef
@@ -767,12 +744,12 @@ def SearchAndRun(script_name: string)
     extend(working_dir, split(getcwd(), path_separator))
 
     while len(working_dir) > 0
-        var directory_path = working_dir->join(path_separator)
+        const directory_path = working_dir->join(path_separator)
         if executable(join([directory_path, path_separator, script_name], ""))
             # One problem with this is that I can't scroll through the
             # history to see all the errors from the beginning
-            var script = script_name
-            var completed_message = "Completed Successfully"
+            const script = script_name
+            const completed_message = "Completed Successfully"
 
             if has('win32')
                 script = 'C:\tools\shell-init.bat && ' .. script
@@ -892,7 +869,6 @@ def g:GoToProjectOrMake(bang: bool, command_line: string)
 
         path_start = match(command_line, '[^ \t]\|$', option_end)
     endwhile
-
     const project_name = command_line[path_start : ]
 
     if len(project_name) != 0
@@ -958,10 +934,10 @@ command! -nargs=1 RFC :GetRFC(<q-args>)
 # Can change this in the machine specific vimrc
 const rfc_download_location = $HOME .. '/RFC-downloads'
 
-# Abbreviations in insert mode (should these be commands?
-iabbrev <silent> :Now:     <Esc>:var @x = strftime("%X")<CR>"xpa
-iabbrev <silent> :Today:   <Esc>:var @x = strftime("%d %b %Y")<CR>"xpa
-iabbrev <silent> :Random:  <Esc>:var @x = rand()<CR>"xpa
+# Abbreviations in insert mode. Should these be commands?
+iabbrev :Now:    <Esc>:let @x = strftime("%X")<CR>"xpa
+iabbrev :Today:  <Esc>:let @x = strftime("%d %b %Y")<CR>"xpa
+iabbrev :Random: <Esc>:let @x = rand()<CR>"xpa
 
 # =============================================
 
@@ -1059,7 +1035,6 @@ iabbrev <silent> :Random:  <Esc>:var @x = rand()<CR>"xpa
 # nnoremap <silent> ]] :CloseBracket("normal", OperGetLine(0), OperGetLine(-1))<CR>
 # nnoremap <silent> ][ :CloseBracket("normal", OperGetLine(0), OperGetLine(-1))<CR>
 # MakeOperator(']', funcref('CloseBracket'))
-
 
 # set indentexpr=CustomIndent()
 # def CustomIndent()
