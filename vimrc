@@ -48,7 +48,8 @@ set tabstop=4 shiftwidth=0 softtabstop=-1 expandtab
 set cindent cinoptions=l1,=0,:4,(0,{0,+2,w1,W4,t0
 set shortmess=filnxtToOIs
 
-set viminfo+=n$VIMRUNTIME/info # Out of sight, out of mind
+# set viminfo+=n$VIMRUNTIME/info # Out of sight, out of mind
+set viminfo=
 
 set display=lastline # For writing prose
 set noswapfile
@@ -85,7 +86,14 @@ else
     AddToPath('/usr/local/sbin', $HOME .. '/bin', '/usr/local/bin')
 endif
 
+const path_separator = has('win32') ? '\' : '/'
 const dot_vim_path = fnamemodify(expand("$MYVIMRC"), ":p:h")
+
+# For machine specific additions changes
+const local_vimrc_path = join([$HOME, '.local', 'vimrc'], path_separator)
+if filereadable(local_vimrc_path)
+    execute "source " .. local_vimrc_path
+endif
 
 if filereadable(dot_vim_path .. '/autoload/plug.vim')
     plug#begin(dot_vim_path .. '/plugins')
@@ -101,11 +109,26 @@ if filereadable(dot_vim_path .. '/autoload/plug.vim')
     # Git support
     Plug 'tpope/vim-fugitive'
 
+    if exists('*g:LocalVimRCPlugins')
+        g:LocalVimRCPlugins()
+    endif
+
+
     plug#end()
 endif
 
 filetype plugin on
 colorscheme custom
+
+# TODO: Install ripgrep and fzf here
+
+# Diff files
+nnoremap <leader>d :if &diff \| diffoff \| else \| diffthis \| endif<CR>
+
+# Git merge conflicts
+nnoremap <leader>gd :vert Gdiffsplit!<CR>
+nnoremap <leader>gh :diffget //2<CR>
+nnoremap <leader>gl :diffget //3<CR>
 
 # Make help window show up on right, not above
 augroup MiscFile
@@ -538,7 +561,6 @@ hi CustomPurple      guifg=#950087 guibg=NONE ctermfg=90  ctermbg=NONE gui=none 
 
 # ============================================
 # Common variables that may be needed by other functions
-const path_separator = has('win32') ? '\' : '/'
 const header = [
     '/*',
     '  File: {file_name}',
@@ -1061,16 +1083,30 @@ iabbrev :Random: <Esc>:let @x = rand()<CR>"xpa
 #     return cindent(line_num)
 # enddef
 
-# For machine specific additions changes
-const local_vimrc_path = join([$HOME, '.local', 'vimrc'], path_separator)
-if filereadable(local_vimrc_path)
-    execute "source " .. local_vimrc_path
-endif
-
 # Re-source gvimrc when vimrc is reloaded
 const gvim_path = join([dot_vim_path, 'gvimrc'], path_separator)
 if has('gui') && filereadable(gvim_path)
     execute "source " .. gvim_path
 endif
+
+if exists('*g:LocalVimRCEnd')
+    g:LocalVimRCEnd()
+endif
+
+# def g:TestVirtualText()
+#     if len(prop_type_get('number')) == 0
+#         prop_type_add('number', {'highlight': 'Constant'})
+#     endif
+#     const current_line = line('.')
+#     const props = current_line->prop_list()
+# 
+# 
+#     if len(props) > 0
+#         current_line->prop_clear()
+#     else
+#         current_line->prop_add(0, {"type": "number", "text": "This is virtual text"})
+#     endif
+# enddef
+# nnoremap <leader>v :call g:TestVirtualText()<CR>
 
 defcompile
